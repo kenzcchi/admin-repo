@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Dashboard - Pack-N-Ship{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- For the Revenue Chart -->
+</head>
+<body class="bg-[#F8F9FA] text-gray-800 font-sans antialiased overflow-hidden flex h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-20">
+        <!-- Logo Area -->
+        <div class="h-24 flex items-center justify-center border-b border-transparent">
+            <!-- Replace with actual logo img tag later -->
+            <img src="{% static 'images/packnship_logo.png' %}" alt="Pack-N-Ship Logo" class="h-16 w-auto object-contain">
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-3">
+            
+            <!-- Dashboard -->
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'dashboard' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/dashboard_icon.png' %}" alt="Dashboard" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Dashboard</span>
+            </a>
+
+            <!-- Users -->
+            <a href="{% url 'users' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'users' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/users_icon.png' %}" alt="Users" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Users</span>
+            </a>
+
+            <!-- Provider Verification -->
+            <a href="{% url 'provider_verification' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'provider_verification' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/providerverification_icon.png' %}" alt="Provider Verification" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Provider Verification</span>
+            </a>
+
+            <!-- Vehicle Documents -->
+            <a href="{% url 'vehicle_documents' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'vehicle_documents' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/vehicledocuments_icon.png' %}" alt="Vehicle Documents" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Vehicle Documents</span>
+            </a>
+
+            <!-- Deliveries -->
+            <a href="{% url 'deliveries' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'deliveries' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/deliveries_icon.png' %}" alt="Deliveries" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Deliveries</span>
+            </a>
+
+            <!-- Escrow & Payments -->
+            <a href="{% url 'escrow' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'escrow' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/escrowandpayments_icon.png' %}" alt="Escrow & Payments" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Escrow & Payments</span>
+            </a>
+
+            <!-- Transactions -->
+            <a href="{% url 'transactions' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'transactions' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/transaction_icon.png' %}" alt="Transactions" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Transactions</span>
+            </a>
+
+            <!-- Ratings and Feedback -->
+            <a href="{% url 'feedback' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'feedback' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/feedbackanddispute_icon.png' %}" alt="Ratings and Feedback" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Ratings and Feedback</span>
+            </a>
+
+            <!-- Reports -->
+            <a href="{% url 'reports' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'reports' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
+                <img src="{% static 'images/report_icon.png' %}" alt="Reports" class="w-5 h-5 object-contain">
+                <span class="font-medium text-sm">Reports</span>
+            </a>
+        </nav>
+
+        <!-- Bottom Links (Settings & Logout) -->
+        <div class="p-3 space-y-1 border-t border-gray-100">
+            
+            <!-- Settings -->
+            <a href="{% url 'settings' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'settings' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg whitespace-nowrap">
+                <!-- Swapped the div placeholder for an actual image tag -->
+                <img src="{% static 'images/setting_icon.png' %}" alt="Settings" class="w-5 h-5 object-contain"> 
+                <span class="font-medium text-sm">Settings</span>
+            </a>
+            
+            <!-- Logout Form with Warning -->
+            <form method="post" action="{% url 'logout' %}" class="block" onsubmit="return confirm('Are you sure you want to log out of Pack-N-Ship?');">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors text-left whitespace-nowrap">
+                    <!-- Swapped the div placeholder for an actual image tag -->
+                    <img src="{% static 'images/logout_icon.png' %}" alt="Logout" class="w-5 h-5 object-contain">
+                    <span class="font-medium text-sm">Logout</span>
+                </button>
+            </form>
+
+        </div>
+
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <!-- Top Navbar (Search Bar Removed) -->
+        <!-- Note: Changed justify-between to justify-end so the profile stays on the right -->
+        <header class="h-20 bg-[#F8F9FA] flex items-center justify-end px-8 z-10">
+
+            <!-- Profile Area -->
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-5 cursor-pointer">
+                    <!-- Profile Image -->
+                    <img src="{% static 'images/adminprofile_icon.png' %}" alt="Profile" class="w-10 h-10 rounded-full object-cover bg-gray-300">
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-gray-800">{{ request.user.first_name|default:"Admin" }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </header>
+
+        <!-- Dynamic Page Content -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-8">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+    </div>
+</body>
+</html>
