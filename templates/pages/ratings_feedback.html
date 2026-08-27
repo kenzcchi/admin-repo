@@ -1,0 +1,153 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Ratings & Feedback - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Sub-navigation Header Tabs -->
+    <div class="flex items-center gap-4 mb-6 px-2">
+        <a href="?tab=ratings" class="text-[28px] font-bold transition-colors {% if current_tab == 'ratings' %}text-[#FF6B2C]{% else %}text-gray-900 hover:text-gray-600{% endif %}">
+            Ratings & Feedback
+        </a>
+        
+        <span class="text-2xl text-gray-400 font-light">|</span>
+        
+        <a href="?tab=disputes" class="text-[28px] font-bold transition-colors {% if current_tab == 'disputes' %}text-[#FF6B2C]{% else %}text-gray-900 hover:text-gray-600{% endif %}">
+            Manage Disputes
+        </a>
+    </div>
+
+    <!-- Main Content Container Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[500px]">
+        
+        {% if current_tab == 'ratings' %}
+        <!-- ========================================== -->
+        <!-- RATINGS & FEEDBACK TABLE                  -->
+        <!-- ========================================== -->
+        <div class="grid grid-cols-6 gap-4 bg-[#F0F3F8] rounded-xl px-6 py-3.5 mb-2 text-sm font-semibold text-gray-600">
+            <div class="col-span-1">Rating</div>
+            <div class="col-span-1">Provider</div>
+            <div class="col-span-1">Review Comment</div>
+            <div class="col-span-1">Flagged</div>
+            <div class="col-span-1">Date</div>
+            <div class="col-span-1">Action</div>
+        </div>
+
+        <div class="flex flex-col space-y-1">
+            {% for item in reviews %}
+            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50/70 rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm text-gray-700">
+                
+                <!-- Rating Stars & Value -->
+                <div class="col-span-1 flex flex-col items-start gap-0.5">
+                    <div class="flex text-amber-400 text-sm">
+                        {% for star in item.stars_filled %}★{% endfor %}
+                        {% for star in item.stars_empty %}<span class="text-amber-200">★</span>{% endfor %}
+                    </div>
+                    <span class="text-xs font-semibold text-gray-700">{{ item.rating }}/5</span>
+                </div>
+
+                <!-- Provider Name -->
+                <div class="col-span-1 font-medium text-gray-800">
+                    {{ item.provider }}
+                </div>
+
+                <!-- Comment Text -->
+                <div class="col-span-1 text-gray-600 truncate pr-2">
+                    {{ item.comment }}
+                </div>
+
+                <!-- Flagged Tag -->
+                <div class="col-span-1">
+                    {% if item.flagged %}
+                        <span class="inline-flex items-center gap-1.5 bg-[#FFE4E6] text-[#E11D48] font-semibold text-xs px-3 py-1 rounded-full">
+                            🚩 Flagged
+                        </span>
+                    {% else %}
+                        <span class="text-gray-400 font-medium">—</span>
+                    {% endif %}
+                </div>
+
+                <!-- Date -->
+                <div class="col-span-1 text-gray-600 font-medium">
+                    {{ item.date }}
+                </div>
+
+                <!-- Action Button -->
+                <div class="col-span-1">
+                    <button type="button" class="bg-[#F1F5F9] hover:bg-[#e2e8f0] text-gray-700 font-semibold text-xs px-4 py-2 rounded-full transition whitespace-nowrap">
+                        Remove Feedback
+                    </button>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <!-- ========================================== -->
+        <!-- MANAGE DISPUTES TABLE                     -->
+        <!-- ========================================== -->
+        <div class="grid grid-cols-6 gap-4 bg-[#F0F3F8] rounded-xl px-6 py-3.5 mb-2 text-sm font-semibold text-gray-600">
+            <div class="col-span-1">Dispute ID</div>
+            <div class="col-span-1">Delivery ID</div>
+            <div class="col-span-1">Reported By</div>
+            <div class="col-span-1">Issue Type</div>
+            <div class="col-span-1">Status</div>
+            <div class="col-span-1">Action</div>
+        </div>
+
+        <div class="flex flex-col space-y-1">
+            {% for item in disputes %}
+            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50/70 rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm text-gray-700">
+                
+                <!-- Dispute ID -->
+                <div class="col-span-1 font-medium text-gray-900">
+                    {{ item.id }}
+                </div>
+
+                <!-- Delivery ID -->
+                <div class="col-span-1 font-medium text-gray-800">
+                    {{ item.delivery_id }}
+                </div>
+
+                <!-- Reported By -->
+                <div class="col-span-1 font-medium text-gray-800 truncate pr-2">
+                    {{ item.reported_by }}
+                </div>
+
+                <!-- Issue Type -->
+                <div class="col-span-1 font-medium text-gray-800">
+                    {{ item.issue_type }}
+                </div>
+
+                <!-- Status Badges -->
+                <div class="col-span-1">
+                    {% if item.status == 'Pending' %}
+                        <span class="inline-block bg-[#FFEFE4] text-[#D97706] font-semibold text-xs px-4 py-1.5 rounded-full">Pending</span>
+                    {% elif item.status == 'Resolved' %}
+                        <span class="inline-block bg-[#DCFCE7] text-[#15803D] font-semibold text-xs px-4 py-1.5 rounded-full">Resolved</span>
+                    {% elif item.status == 'In Review' %}
+                        <span class="inline-block bg-[#DBEAFE] text-[#2563EB] font-semibold text-xs px-4 py-1.5 rounded-full">In Review</span>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-span-1 flex items-center gap-2">
+                    <button type="button" class="bg-[#F1F5F9] hover:bg-[#e2e8f0] text-gray-700 font-semibold text-xs px-4 py-2 rounded-full transition">
+                        Review
+                    </button>
+                    <button type="button" class="bg-[#F1F5F9] hover:bg-[#e2e8f0] text-gray-700 font-semibold text-xs px-4 py-2 rounded-full transition">
+                        Resolve
+                    </button>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

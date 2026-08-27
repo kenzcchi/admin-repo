@@ -201,7 +201,70 @@ def escrow_payments(request):
 
 
 def ratings_feedback(request):
-    return generic_admin_page(request, 'Ratings and Feedback')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    current_tab = request.GET.get('tab', 'ratings')
+
+    mock_reviews = [
+        {
+            'rating': 2,
+            'stars_filled': [1, 2],
+            'stars_empty': [1, 2, 3],
+            'provider': 'Moises P.',
+            'comment': 'Package left at wrong curb...',
+            'flagged': True,
+            'date': '2026-03-28'
+        },
+        {
+            'rating': 1,
+            'stars_filled': [1],
+            'stars_empty': [1, 2, 3, 4],
+            'provider': 'Jun Joseph P.',
+            'comment': 'Very unprofessional, did not...',
+            'flagged': True,
+            'date': '2026-03-27'
+        },
+        {
+            'rating': 5,
+            'stars_filled': [1, 2, 3, 4, 5],
+            'stars_empty': [],
+            'provider': 'Jun Joseph P.',
+            'comment': 'Very careful with my boxex,...',
+            'flagged': False,
+            'date': '2026-03-26'
+        },
+    ]
+
+    mock_disputes = [
+        {
+            'id': 'DSP-1042',
+            'delivery_id': '1001',
+            'reported_by': 'Jonel Jumawan - Sender',
+            'issue_type': 'Damaged Item',
+            'status': 'Pending'
+        },
+        {
+            'id': 'DSP-1032',
+            'delivery_id': '1001',
+            'reported_by': 'Jun Joseph Pestaño -Sender',
+            'issue_type': 'Missing Package',
+            'status': 'Resolved'
+        },
+        {
+            'id': 'DSP-1022',
+            'delivery_id': '1003',
+            'reported_by': 'Bryan Dionson - Provider',
+            'issue_type': 'Unprofessional Conduct',
+            'status': 'In Review'
+        },
+    ]
+
+    return render(request, 'pages/ratings_feedback.html', {
+        'current_tab': current_tab,
+        'reviews': mock_reviews,
+        'disputes': mock_disputes,
+    })
 
 def reports(request):
     return generic_admin_page(request, 'Reports')
