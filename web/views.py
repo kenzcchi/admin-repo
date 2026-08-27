@@ -125,7 +125,47 @@ def reject_provider(request, pk):
     return redirect('provider_verification')
 
 def deliveries(request):
-    return generic_admin_page(request, 'Deliveries')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    mock_deliveries = [
+        {
+            'id': '1001',
+            'sender': 'Jonel Jumawan',
+            'provider': 'Jun Joseph Pestaño',
+            'status': 'Pending',
+            'emergency': 'Normal',
+            'escrow_status': 'On Hold'
+        },
+        {
+            'id': '1002',
+            'sender': 'Kornel Jumao-as',
+            'provider': 'Jun Joseph Pestaño',
+            'status': 'Accepted',
+            'emergency': 'Frozen',
+            'escrow_status': 'Frozen'
+        },
+        {
+            'id': '1003',
+            'sender': 'Alucard Jungler',
+            'provider': 'Moises Padriga',
+            'status': 'In Transit',
+            'emergency': 'Normal',
+            'escrow_status': 'On Hold'
+        },
+        {
+            'id': '1004',
+            'sender': 'Hilda Roamer',
+            'provider': 'Moises Padriga',
+            'status': 'Completed',
+            'emergency': 'Normal',
+            'escrow_status': 'Released'
+        },
+    ]
+
+    return render(request, 'pages/deliveries.html', {
+        'deliveries': mock_deliveries
+    })
 
 # Generic placeholder view for other sections so routing works perfectly
 def generic_admin_page(request, title):
@@ -135,10 +175,30 @@ def generic_admin_page(request, title):
 
 
 def escrow_payments(request):
-    return generic_admin_page(request, 'Escrow & Payments')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
 
-def transactions(request):
-    return generic_admin_page(request, 'Transactions')
+    # Get the active sub-tab from URL query parameters (defaults to 'active')
+    current_tab = request.GET.get('tab', 'active')
+
+    mock_escrow = [
+        {'id': 'EID501', 'delivery_id': '1001', 'amount': '₱250', 'status': 'On Hold'},
+        {'id': 'EID502', 'delivery_id': '1002', 'amount': '₱180', 'status': 'Frozen'},
+        {'id': 'EID503', 'delivery_id': '1003', 'amount': '₱220', 'status': 'Released'},
+    ]
+
+    mock_transactions = [
+        {'id': 'TID101', 'delivery_id': '1001', 'amount': '₱250', 'method': 'GCash', 'status': 'On Hold', 'date': '2026-03-28'},
+        {'id': 'TID102', 'delivery_id': '1002', 'amount': '₱180', 'method': 'GCash', 'status': 'Frozen', 'date': '2026-03-27'},
+        {'id': 'TID103', 'delivery_id': '1003', 'amount': '₱220', 'method': 'GCash', 'status': 'Completed', 'date': '2026-03-26'},
+    ]
+
+    return render(request, 'pages/escrow.html', {
+        'current_tab': current_tab,
+        'escrow_list': mock_escrow,
+        'transactions': mock_transactions,
+    })
+
 
 def ratings_feedback(request):
     return generic_admin_page(request, 'Ratings and Feedback')

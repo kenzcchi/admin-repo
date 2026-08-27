@@ -51,12 +51,6 @@
                 <span class="font-medium text-sm">Escrow & Payments</span>
             </a>
 
-            <!-- Transactions -->
-            <a href="{% url 'transactions' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'transactions' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
-                <img src="{% static 'images/transaction_icon.png' %}" alt="Transactions" class="w-5 h-5 object-contain">
-                <span class="font-medium text-sm">Transactions</span>
-            </a>
-
             <!-- Ratings and Feedback -->
             <a href="{% url 'feedback' %}" class="flex items-center gap-3 px-4 py-3 {% if request.resolver_match.url_name == 'feedback' %}bg-[#FF751F] text-white shadow-sm shadow-[#ff751f]/40 transition-transform hover:-translate-y-0.5{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors{% endif %} rounded-lg">
                 <img src="{% static 'images/feedbackanddispute_icon.png' %}" alt="Ratings and Feedback" class="w-5 h-5 object-contain">
