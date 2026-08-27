@@ -1,4 +1,5 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import ProviderVerification
 
 def admin_login(request):
     # If already logged in, go straight to the dashboard
@@ -72,21 +73,66 @@ def users_page(request):
         'users': filtered_users,
         'current_tab': current_tab
     })
+
+#Provider-Verification    
+def provider_verification(request):
+# Enforce mock session check matching users_page pattern
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    # Mock provider verification data
+    mock_verifications = [
+        {
+            'id': 1,
+            'name': 'John David Torres Villanueva',
+            'id_photo': '/media/verifications/ids/sample1.jpg',
+            'selfie': '/media/verifications/selfies/sample1.jpg',
+            'plate_no': 'ABCD-123',
+            'vehicle_type': 'Sedan',
+            'vehicle_doc': '/media/verifications/docs/orcr_john.pdf',
+            'vehicle_doc_name': 'orcr_john.pdf',
+            'status': 'Pending'
+        },
+        {
+            'id': 2,
+            'name': 'Bryan Nikole Dionson',
+            'id_photo': '/media/verifications/ids/sample2.jpg',
+            'selfie': '/media/verifications/selfies/sample2.jpg',
+            'plate_no': 'EFGH-456',
+            'vehicle_type': 'SUV',
+            'vehicle_doc': '/media/verifications/docs/orcr_bryan.pdf',
+            'vehicle_doc_name': 'orcr_bryan.pdf',
+            'status': 'Pending'
+        }
+    ]
     
+    return render(request, 'pages/provider_verification.html', {
+        'verifications': mock_verifications
+    })
+
+def approve_provider(request, pk):
+    if request.method == 'POST':
+        verification = get_object_or_404(ProviderVerification, pk=pk)
+        verification.status = 'Approved'
+        verification.save()
+    return redirect('provider_verification')
+
+def reject_provider(request, pk):
+    if request.method == 'POST':
+        verification = get_object_or_404(ProviderVerification, pk=pk)
+        verification.status = 'Rejected'
+        verification.save()
+    return redirect('provider_verification')
+
+def deliveries(request):
+    return generic_admin_page(request, 'Deliveries')
+
 # Generic placeholder view for other sections so routing works perfectly
 def generic_admin_page(request, title):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
     return render(request, 'pages/generic_placeholder.html', {'page_title': title})
 
-def provider_verification(request):
-    return generic_admin_page(request, 'Provider Verification')
-
-def vehicle_documents(request):
-    return generic_admin_page(request, 'Vehicle Documents')
-
-def deliveries(request):
-    return generic_admin_page(request, 'Deliveries')
 
 def escrow_payments(request):
     return generic_admin_page(request, 'Escrow & Payments')

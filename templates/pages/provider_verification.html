@@ -1,0 +1,197 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Provider Verification - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Header Section -->
+    <div class="flex justify-between items-center mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-800">Provider Verification</h1>
+    </div>
+
+    <!-- Main Container Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-sm min-h-[600px]">
+        
+        <!-- Table Header -->
+        <div class="grid grid-cols-7 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Provider ID</div>
+            <div class="col-span-2">Name</div>
+            <div class="col-span-1">Vehicle Info</div>
+            <div class="col-span-1 text-center">Status</div>
+            <div class="col-span-2 text-right pr-4">Actions</div>
+        </div>
+
+        <!-- Table Body -->
+        <div class="flex flex-col space-y-1">
+            {% for item in verifications %}
+            <div onclick="openVerificationModal('{{ item.id }}', '{{ item.name }}', '{{ item.license_no|default:'D06-11-009385' }}', '{{ item.expiry_date|default:'2026-03-27' }}', '{{ item.id_photo }}', '{{ item.selfie }}', '{{ item.plate_no|default:'ABCD-123' }}', '{{ item.vehicle_type|default:'Sedan' }}', '{{ item.vehicle_doc|default:'/media/sample.pdf' }}', '{{ item.status }}')" 
+                 class="grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+                
+                <div class="col-span-1 text-sm font-medium text-gray-800">US{{ item.id }}</div>
+                <div class="col-span-2 text-sm font-semibold text-gray-900">{{ item.name }}</div>
+                <div class="col-span-1 text-sm text-gray-600">
+                    <div>{{ item.plate_no|default:"ABCD-123" }}</div>
+                    <div class="text-xs text-gray-400">{{ item.vehicle_type|default:"Sedan" }}</div>
+                </div>
+                
+                <!-- Status Badge -->
+                <div class="col-span-1 flex items-center justify-center">
+                    <span class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">
+                        {{ item.status }}
+                    </span>
+                </div>
+                
+                <!-- Direct Action Buttons -->
+                <div class="col-span-2 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    <button type="button" class="bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-semibold text-xs px-5 py-2 rounded-full transition shadow-sm">
+                        Approve
+                    </button>
+                    <button type="button" class="bg-[#E2E8F0] hover:bg-[#cbd5e1] text-gray-600 font-semibold text-xs px-5 py-2 rounded-full transition">
+                        Reject
+                    </button>
+                </div>
+
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-sm">No pending verification requests found.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PROVIDER VERIFICATION OVERLAY MODAL        -->
+<!-- ========================================== -->
+<div id="verificationModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    
+    <!-- Dark transparent backdrop -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeVerificationModal()"></div>
+    
+    <!-- Modal Content Box -->
+    <div id="modalContent" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col p-6">
+        
+        <!-- Top Status & Close Row -->
+        <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-6">
+            <div class="flex items-center gap-3">
+                <h2 class="text-3xl font-bold text-gray-900">Status:</h2>
+                <span id="modalStatusBadge" class="px-5 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-bold text-base">
+                    Pending
+                </span>
+            </div>
+            <button onclick="closeVerificationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Document & Details Grid (Matching Picture 2 Layout) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center mb-8">
+            
+            <!-- Left Side: ID Card Image -->
+            <div class="md:col-span-6 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                <img id="modalIdPhoto" src="" alt="Driver's License" class="w-full h-56 object-cover rounded-lg shadow-sm">
+            </div>
+
+            <!-- Middle Side: License Details -->
+            <div class="md:col-span-3 space-y-3">
+                <div>
+                    <p class="text-base font-bold text-gray-900 leading-tight">Driver's License #</p>
+                    <p id="modalLicenseNo" class="text-lg font-semibold text-gray-600">D06-11-009385</p>
+                </div>
+                
+                <hr class="border-gray-200 my-2">
+
+                <div>
+                    <p class="text-base font-bold text-gray-900 leading-tight">Expiry Date</p>
+                    <p id="modalExpiryDate" class="text-lg font-semibold text-gray-600">2026-03-27</p>
+                </div>
+
+                <hr class="border-gray-200 my-2">
+
+                <div>
+                    <p id="modalName" class="text-xl font-extrabold text-gray-900 leading-snug">
+                        John David Torres Villanueva
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Side: Selfie Photo -->
+            <div class="md:col-span-3 flex flex-col items-center justify-center text-center">
+                <div class="w-36 h-36 rounded-full overflow-hidden border-4 border-[#FF6B2C] shadow-md mb-2 bg-gray-100">
+                    <img id="modalSelfie" src="" alt="Selfie Photo" class="w-full h-full object-cover">
+                </div>
+                <span class="text-lg font-semibold text-gray-800">Selfie Photo</span>
+            </div>
+
+        </div>
+
+        <!-- Vehicle Document Banner Link -->
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📄</span>
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 uppercase">Vehicle Registration & OR/CR</p>
+                    <p id="modalVehicleInfo" class="text-sm font-bold text-gray-800">ABCD-123 (Sedan)</p>
+                </div>
+            </div>
+            <a id="modalVehicleDocLink" href="#" target="_blank" class="text-[#FF6B2C] hover:underline text-sm font-bold flex items-center gap-1">
+                View Full Document ↗
+            </a>
+        </div>
+
+        <!-- Footer Row: Provider ID & Action Buttons -->
+        <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
+            <span id="modalProviderId" class="text-2xl font-bold text-gray-900">US3</span>
+            
+            <div class="flex items-center gap-3">
+                <button type="button" class="bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-bold text-lg px-8 py-2.5 rounded-full transition shadow-md">
+                    Approve
+                </button>
+                <button type="button" onclick="closeVerificationModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-lg px-8 py-2.5 rounded-full transition">
+                    Reject
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const verificationModal = document.getElementById('verificationModal');
+    const modalContent = document.getElementById('modalContent');
+
+    function openVerificationModal(id, name, licenseNo, expiryDate, idPhoto, selfie, plateNo, vehicleType, vehicleDoc, status) {
+        document.getElementById('modalProviderId').innerText = 'US' + id;
+        document.getElementById('modalName').innerText = name;
+        document.getElementById('modalLicenseNo').innerText = licenseNo;
+        document.getElementById('modalExpiryDate').innerText = expiryDate;
+        document.getElementById('modalIdPhoto').src = idPhoto;
+        document.getElementById('modalSelfie').src = selfie;
+        document.getElementById('modalVehicleInfo').innerText = `${plateNo} (${vehicleType})`;
+        document.getElementById('modalVehicleDocLink').href = vehicleDoc;
+        
+        document.getElementById('modalStatusBadge').innerText = status;
+
+        verificationModal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeVerificationModal() {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        
+        setTimeout(() => {
+            verificationModal.classList.add('hidden');
+        }, 300);
+    }
+</script>
+{% endblock %}
