@@ -1,0 +1,106 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Settings - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Header Section -->
+    <div class="mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-900 leading-tight">Finance & Revenue Engine</h1>
+        <p class="text-sm text-gray-500 font-medium mt-0.5">
+            Commission, base pricing & Door-to-Door convenience fee
+        </p>
+    </div>
+
+    <!-- Main Settings Form Container -->
+    <form method="POST" action="{% url 'settings' %}">
+        {% csrf_token %}
+        <div class="bg-white rounded-3xl p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] mb-8 space-y-6">
+            
+            <!-- Door-to-Door Group -->
+            <div class="bg-[#F2F3F5] rounded-2xl p-6">
+                <label class="block text-sm font-bold text-gray-800 mb-0.5">
+                    Door-to-Door
+                </label>
+                <p class="text-xs text-gray-500 font-medium mb-3">
+                    Extra fee (₱) — added to total
+                </p>
+                <input 
+                    type="text" 
+                    name="door_to_door" 
+                    value="{{ settings.door_to_door }}" 
+                    class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition"
+                >
+                <p class="text-[11px] text-gray-400 font-medium mt-2">
+                    Convenience surcharge for indoor pickup/dropoff
+                </p>
+            </div>
+
+            <!-- Platform Commission Rate -->
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">
+                    Platform Commission Rate (%)
+                </label>
+                <input 
+                    type="text" 
+                    name="platform_commission" 
+                    value="{{ settings.platform_commission }}" 
+                    class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition"
+                >
+                <p class="text-[11px] text-gray-400 font-medium">
+                    Per successful transaction
+                </p>
+            </div>
+
+            <!-- Base Fare -->
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">
+                    Base Fare (₱)
+                </label>
+                <input 
+                    type="text" 
+                    name="base_fare" 
+                    value="{{ settings.base_fare }}" 
+                    class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition"
+                >
+            </div>
+
+            <!-- Per Kilometer Rate -->
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">
+                    Per Kilometer Rate (₱/km)
+                </label>
+                <input 
+                    type="text" 
+                    name="per_km_rate" 
+                    value="{{ settings.per_km_rate }}" 
+                    class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400 transition"
+                >
+            </div>
+
+            <!-- Calculation Formula Callout -->
+            <div class="bg-[#F2F3F5] rounded-xl px-5 py-3.5 flex items-center gap-3 text-xs text-gray-500 font-medium">
+                <span class="text-base">🧮</span>
+                <span>Estimated pricing: Base + (km × rate) + Door-to-Door Fee (if enabled)</span>
+            </div>
+
+        </div>
+
+        <!-- Save Button Container -->
+        <div class="flex justify-end px-2">
+            <button 
+                type="submit" 
+                class="inline-flex items-center gap-2.5 bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-semibold text-sm px-6 py-3 rounded-xl transition shadow-sm"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                </svg>
+                Save All Settings
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

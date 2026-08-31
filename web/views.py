@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import ProviderVerification
+from django.contrib import messages
 
 def admin_login(request):
     # If already logged in, go straight to the dashboard
@@ -267,10 +268,36 @@ def ratings_feedback(request):
     })
 
 def reports(request):
-    return generic_admin_page(request, 'Reports')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+        
+    return render(request, 'pages/reports.html')
 
 def settings_page(request):
-    return generic_admin_page(request, 'Settings')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    # Default initial values
+    settings_data = {
+        'door_to_door': '20.00',
+        'platform_commission': '8.5',
+        'base_fare': '49.00',
+        'per_km_rate': '14.50'
+    }
+
+    if request.method == 'POST':
+        # Grab updated values from form submit
+        settings_data['door_to_door'] = request.POST.get('door_to_door', settings_data['door_to_door'])
+        settings_data['platform_commission'] = request.POST.get('platform_commission', settings_data['platform_commission'])
+        settings_data['base_fare'] = request.POST.get('base_fare', settings_data['base_fare'])
+        settings_data['per_km_rate'] = request.POST.get('per_km_rate', settings_data['per_km_rate'])
+
+        # Show success toast or message
+        messages.success(request, 'Settings updated successfully!')
+
+    return render(request, 'pages/settings.html', {
+        'settings': settings_data
+    })
 
 
 def custom_logout(request):

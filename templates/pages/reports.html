@@ -1,0 +1,137 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Reports - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-800">Reports</h1>
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="bg-white rounded-3xl p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] mb-8">
+        
+        <!-- Card Header with Month Filter -->
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-gray-800">Revenue</h2>
+            
+            <div class="relative">
+                <select class="appearance-none bg-white border border-gray-200 text-gray-500 text-xs rounded-lg px-4 py-2 pr-8 focus:outline-none focus:border-gray-400 cursor-pointer shadow-sm font-medium">
+                    <option value="october" selected>October</option>
+                    <option value="november">November</option>
+                    <option value="december">December</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-gray-400">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Container -->
+        <div class="relative w-full h-[360px]">
+            <canvas id="revenueChart"></canvas>
+        </div>
+
+        <!-- Custom Legend -->
+        <div class="flex justify-center items-center gap-8 mt-6">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-[#FF8C68]"></span>
+                <span class="text-xs font-bold text-gray-700">Gross Transaction</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-[#FDE2B5]"></span>
+                <span class="text-xs font-bold text-gray-700">Net Revenue</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Export Button Container -->
+    <div class="flex justify-end px-2">
+        <button type="button" class="inline-flex items-center gap-2 bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-semibold text-sm px-6 py-3 rounded-xl transition shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
+            Export
+        </button>
+    </div>
+
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+
+        const labels = ['5k', '10k', '15k', '20k', '25k', '30k', '35k', '40k', '45k', '50k', '55k', '60k'];
+
+        // Data curves tailored to match the provided layout waveform
+        const grossTransactionData = [20, 33, 29, 28, 55, 38, 91, 40, 66, 35, 58, 20];
+        const netRevenueData        = [20, 70, 34, 33, 44, 51, 28, 57, 28, 48, 91, 20];
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Gross Transaction',
+                        data: grossTransactionData,
+                        borderColor: 'transparent',
+                        backgroundColor: 'rgba(255, 140, 104, 0.75)',
+                        fill: true,
+                        tension: 0.45,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'Net Revenue',
+                        data: netRevenueData,
+                        borderColor: 'transparent',
+                        backgroundColor: 'rgba(253, 226, 181, 0.75)',
+                        fill: true,
+                        tension: 0.45,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: '#9CA3AF',
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            color: '#9CA3AF',
+                            font: { size: 11 }
+                        },
+                        grid: {
+                            color: '#F3F4F6',
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
