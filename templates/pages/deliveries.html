@@ -6,16 +6,14 @@
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
     
-    <!-- Page Header -->
     <div class="flex justify-between items-center mb-6 px-2">
         <h1 class="text-[28px] font-bold text-gray-800">Delivery Management</h1>
     </div>
 
-    <!-- Main Container Card -->
-    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[500px]">
+    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
-        <!-- Table Header -->
-        <div class="grid grid-cols-6 gap-4 bg-[#F0F3F8] rounded-xl px-6 py-3.5 mb-2 text-sm font-semibold text-gray-600">
+        <!-- Standardized Table Header -->
+        <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
             <div class="col-span-1">Delivery ID</div>
             <div class="col-span-1">Sender</div>
             <div class="col-span-1">Provider</div>
@@ -24,49 +22,35 @@
             <div class="col-span-1">Escrow Status</div>
         </div>
 
-        <!-- Table Body -->
         <div class="flex flex-col space-y-1">
             {% for delivery in deliveries %}
-            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50/70 rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm text-gray-700">
+            <!-- Standardized Hover State -->
+            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors border-b border-gray-100 last:border-0 cursor-pointer">
                 
-                <!-- Delivery ID -->
-                <div class="col-span-1 font-medium text-gray-900">
-                    {{ delivery.id }}
+                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.id }}</div>
+                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.sender }}</div>
+                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.provider }}</div>
+
+                <div class="col-span-1">
+                    {% if delivery.status == 'Pending' %}
+                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
+                    {% elif delivery.status == 'Delivered' %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Delivered</span>
+                    {% else %}
+                        <span class="px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ delivery.status }}</span>
+                    {% endif %}
                 </div>
 
-                <!-- Sender -->
-                <div class="col-span-1 font-medium text-gray-800">
-                    {{ delivery.sender }}
-                </div>
-
-                <!-- Provider -->
-                <div class="col-span-1 font-medium text-gray-800">
-                    {{ delivery.provider }}
-                </div>
-
-                <!-- Status -->
-                <div class="col-span-1 font-medium text-gray-800">
-                    {{ delivery.status }}
-                </div>
-
-                <!-- Emergency Status -->
-                <div class="col-span-1 font-medium text-gray-800">
-                    {{ delivery.emergency }}
-                </div>
-
-                <!-- Escrow Status -->
-                <div class="col-span-1 font-medium text-gray-800">
-                    {{ delivery.escrow_status }}
-                </div>
+                <div class="col-span-1 text-sm text-gray-600">{{ delivery.emergency }}</div>
+                <div class="col-span-1 text-sm font-semibold text-gray-700">{{ delivery.escrow_status }}</div>
 
             </div>
             {% empty %}
             <div class="text-center py-12">
-                <p class="text-gray-400 text-sm">No delivery records found.</p>
+                <p class="text-gray-500 text-sm">No delivery records found.</p>
             </div>
             {% endfor %}
         </div>
-
     </div>
 </div>
 {% endblock %}

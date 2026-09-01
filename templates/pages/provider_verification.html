@@ -12,8 +12,18 @@
     </div>
 
     <!-- Main Container Card -->
-    <div class="bg-white rounded-3xl p-6 shadow-sm min-h-[600px]">
+    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
+        <!-- Streamlined Tab Navigation (Pending & Rejected Only) -->
+        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
+            <button onclick="switchTab('pending')" id="tabBtn-pending" class="pb-4 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]">
+                Pending Verification
+            </button>
+            <button onclick="switchTab('rejected')" id="tabBtn-rejected" class="pb-4 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800">
+                Rejected Archive
+            </button>
+        </div>
+
         <!-- Table Header -->
         <div class="grid grid-cols-7 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
             <div class="col-span-1">Provider ID</div>
@@ -23,175 +33,350 @@
             <div class="col-span-2 text-right pr-4">Actions</div>
         </div>
 
-        <!-- Table Body -->
-        <div class="flex flex-col space-y-1">
-            {% for item in verifications %}
-            <div onclick="openVerificationModal('{{ item.id }}', '{{ item.name }}', '{{ item.license_no|default:'D06-11-009385' }}', '{{ item.expiry_date|default:'2026-03-27' }}', '{{ item.id_photo }}', '{{ item.selfie }}', '{{ item.plate_no|default:'ABCD-123' }}', '{{ item.vehicle_type|default:'Sedan' }}', '{{ item.vehicle_doc|default:'/media/sample.pdf' }}', '{{ item.status }}')" 
-                 class="grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
-                
-                <div class="col-span-1 text-sm font-medium text-gray-800">US{{ item.id }}</div>
-                <div class="col-span-2 text-sm font-semibold text-gray-900">{{ item.name }}</div>
-                <div class="col-span-1 text-sm text-gray-600">
-                    <div>{{ item.plate_no|default:"ABCD-123" }}</div>
-                    <div class="text-xs text-gray-400">{{ item.vehicle_type|default:"Sedan" }}</div>
-                </div>
-                
-                <!-- Status Badge -->
-                <div class="col-span-1 flex items-center justify-center">
-                    <span class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">
-                        {{ item.status }}
-                    </span>
-                </div>
-                
-                <!-- Direct Action Buttons -->
-                <div class="col-span-2 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
-                    <button type="button" class="bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-semibold text-xs px-5 py-2 rounded-full transition shadow-sm">
-                        Approve
-                    </button>
-                    <button type="button" class="bg-[#E2E8F0] hover:bg-[#cbd5e1] text-gray-600 font-semibold text-xs px-5 py-2 rounded-full transition">
-                        Reject
-                    </button>
-                </div>
-
-            </div>
-            {% empty %}
-            <div class="text-center py-12">
-                <p class="text-gray-500 text-sm">No pending verification requests found.</p>
-            </div>
-            {% endfor %}
+        <!-- Table Body (Mock Data Container) -->
+        <div id="providerTableBody" class="flex flex-col space-y-1">
+            <!-- Dynamically populated by JavaScript below -->
         </div>
 
     </div>
 </div>
 
 <!-- ========================================== -->
-<!-- PROVIDER VERIFICATION OVERLAY MODAL        -->
+<!-- DOCUMENT REVIEW OVERLAY MODAL              -->
 <!-- ========================================== -->
 <div id="verificationModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-    
-    <!-- Dark transparent backdrop -->
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeVerificationModal()"></div>
     
-    <!-- Modal Content Box -->
-    <div id="modalContent" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col p-6">
+    <div id="modalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
         
-        <!-- Top Status & Close Row -->
-        <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-6">
-            <div class="flex items-center gap-3">
-                <h2 class="text-3xl font-bold text-gray-900">Status:</h2>
-                <span id="modalStatusBadge" class="px-5 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-bold text-base">
-                    Pending
-                </span>
-            </div>
-            <button onclick="closeVerificationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-900">Provider Application Details</h2>
+            <button onclick="closeVerificationModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
 
-        <!-- Document & Details Grid (Matching Picture 2 Layout) -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center mb-8">
-            
-            <!-- Left Side: ID Card Image -->
-            <div class="md:col-span-6 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                <img id="modalIdPhoto" src="" alt="Driver's License" class="w-full h-56 object-cover rounded-lg shadow-sm">
-            </div>
-
-            <!-- Middle Side: License Details -->
-            <div class="md:col-span-3 space-y-3">
-                <div>
-                    <p class="text-base font-bold text-gray-900 leading-tight">Driver's License #</p>
-                    <p id="modalLicenseNo" class="text-lg font-semibold text-gray-600">D06-11-009385</p>
+        <div class="p-6 flex flex-col md:flex-row gap-6">
+            <div class="flex-1 bg-[#F5F6F8] rounded-lg border border-gray-300 overflow-hidden flex flex-col">
+                <div class="bg-[#E4E6EB] px-4 py-2 border-b border-gray-300">
+                    <span class="text-gray-800 text-[15px] font-medium">Logistics Credentials & History</span>
                 </div>
                 
-                <hr class="border-gray-200 my-2">
+                <div class="p-5 space-y-6 overflow-y-auto max-h-[50vh]">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-gray-900 text-xl">Status:</span>
+                        <span id="modalStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100">Pending</span>
+                    </div>
 
-                <div>
-                    <p class="text-base font-bold text-gray-900 leading-tight">Expiry Date</p>
-                    <p id="modalExpiryDate" class="text-lg font-semibold text-gray-600">2026-03-27</p>
-                </div>
+                    <!-- Rejection Alert Box -->
+                    <div id="rejectionReasonBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+                        <span class="font-bold block mb-1">Archive Rejection Note:</span>
+                        <p id="modalRejectionReasonText">None</p>
+                    </div>
 
-                <hr class="border-gray-200 my-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Driver's License</h3>
+                        <div class="bg-white p-2 rounded-lg border border-gray-300 shadow-sm">
+                            <img id="modalIdPhoto" src="{% static 'images/user_avatar_placeholder.png' %}" alt="Driver's License" class="w-full h-48 object-cover rounded shadow-sm bg-gray-100">
+                        </div>
+                    </div>
 
-                <div>
-                    <p id="modalName" class="text-xl font-extrabold text-gray-900 leading-snug">
-                        John David Torres Villanueva
-                    </p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">License Number</p>
+                            <p id="modalLicenseNo" class="text-[15px] text-gray-800 font-medium">D06-11-009385</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Expiry Date</p>
+                            <p id="modalExpiryDate" class="text-[15px] text-gray-800 font-medium">2026-03-27</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-300 rounded-lg p-4 flex justify-between items-center shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <div>
+                                <p class="text-xs font-bold text-gray-400 uppercase">Vehicle OR/CR</p>
+                                <p id="modalVehicleInfo" class="text-sm font-medium text-gray-800">ABCD-123 (Sedan)</p>
+                            </div>
+                        </div>
+                        <a id="modalVehicleDocLink" href="#" target="_blank" class="text-[#FF751F] hover:underline text-sm font-bold flex items-center gap-1">
+                            View PDF ↗
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right Side: Selfie Photo -->
-            <div class="md:col-span-3 flex flex-col items-center justify-center text-center">
-                <div class="w-36 h-36 rounded-full overflow-hidden border-4 border-[#FF6B2C] shadow-md mb-2 bg-gray-100">
-                    <img id="modalSelfie" src="" alt="Selfie Photo" class="w-full h-full object-cover">
+            <div class="w-full md:w-[320px] bg-white rounded-lg border border-gray-300 shadow-sm p-6 flex flex-col items-center justify-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-5 tracking-wide text-center w-full">Identity Match</h3>
+                <div class="w-32 h-32 rounded-full border-4 border-[#E2B7A0] p-1 mb-5">
+                    <img id="modalSelfie" src="{% static 'images/user_avatar_placeholder.png' %}" alt="Selfie" class="w-full h-full object-cover rounded-full bg-orange-100">
                 </div>
-                <span class="text-lg font-semibold text-gray-800">Selfie Photo</span>
+                <h2 id="modalName" class="text-xl font-bold text-gray-900 text-center mb-1">User Name</h2>
+                <p class="text-lg text-gray-800 text-center">Provider</p>
             </div>
-
         </div>
 
-        <!-- Vehicle Document Banner Link -->
-        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex justify-between items-center mb-6">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">📄</span>
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase">Vehicle Registration & OR/CR</p>
-                    <p id="modalVehicleInfo" class="text-sm font-bold text-gray-800">ABCD-123 (Sedan)</p>
-                </div>
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-[15px] text-gray-800">Provider ID:</span>
+                <span id="modalProviderId" class="text-[15px] font-normal text-gray-800">US1</span>
             </div>
-            <a id="modalVehicleDocLink" href="#" target="_blank" class="text-[#FF6B2C] hover:underline text-sm font-bold flex items-center gap-1">
-                View Full Document ↗
-            </a>
-        </div>
-
-        <!-- Footer Row: Provider ID & Action Buttons -->
-        <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
-            <span id="modalProviderId" class="text-2xl font-bold text-gray-900">US3</span>
             
             <div class="flex items-center gap-3">
-                <button type="button" class="bg-[#FF6B2C] hover:bg-[#e05a1f] text-white font-bold text-lg px-8 py-2.5 rounded-full transition shadow-md">
-                    Approve
-                </button>
-                <button type="button" onclick="closeVerificationModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-lg px-8 py-2.5 rounded-full transition">
+                <button type="button" onclick="triggerRejectFromModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium px-8 py-2.5 rounded-lg transition-colors">
                     Reject
+                </button>
+                <button type="button" onclick="triggerApproveFromModal()" class="bg-[#2D9B63] hover:bg-[#258253] text-white text-lg font-medium px-10 py-2.5 rounded-lg shadow-sm transition-colors tracking-wide">
+                    Approve / Re-evaluate
                 </button>
             </div>
         </div>
-
     </div>
 </div>
 
-<script>
-    const verificationModal = document.getElementById('verificationModal');
-    const modalContent = document.getElementById('modalContent');
-
-    function openVerificationModal(id, name, licenseNo, expiryDate, idPhoto, selfie, plateNo, vehicleType, vehicleDoc, status) {
-        document.getElementById('modalProviderId').innerText = 'US' + id;
-        document.getElementById('modalName').innerText = name;
-        document.getElementById('modalLicenseNo').innerText = licenseNo;
-        document.getElementById('modalExpiryDate').innerText = expiryDate;
-        document.getElementById('modalIdPhoto').src = idPhoto;
-        document.getElementById('modalSelfie').src = selfie;
-        document.getElementById('modalVehicleInfo').innerText = `${plateNo} (${vehicleType})`;
-        document.getElementById('modalVehicleDocLink').href = vehicleDoc;
+<!-- ========================================== -->
+<!-- APPROVE CONFIRMATION MODAL                 -->
+<!-- ========================================== -->
+<div id="approveConfirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeApproveConfirm()"></div>
+    
+    <div id="approveConfirmContent" class="relative bg-white rounded-[20px] shadow-2xl w-full max-w-md mx-4 p-8 transform scale-95 opacity-0 transition-all duration-300">
+        <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+        </div>
         
-        document.getElementById('modalStatusBadge').innerText = status;
+        <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Approve Provider</h3>
+        <p id="approveConfirmText" class="text-gray-600 text-center mb-8">Are you sure you want to approve this provider?</p>
+        
+        <div class="flex justify-end gap-3">
+            <button onclick="closeApproveConfirm()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+            <button onclick="executeStatusUpdate('Approved')" class="px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md bg-[#2D9B63] hover:bg-[#258253]">Yes, Approve</button>
+        </div>
+    </div>
+</div>
 
-        verificationModal.classList.remove('hidden');
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-            modalContent.classList.add('scale-100', 'opacity-100');
-        }, 10);
+<!-- ========================================== -->
+<!-- REJECT CONFIRMATION MODAL                  -->
+<!-- ========================================== -->
+<div id="rejectConfirmModal" class="fixed inset-0 z-[60] flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeRejectConfirm()"></div>
+    
+    <div id="rejectConfirmContent" class="relative bg-white rounded-[20px] shadow-2xl w-full max-w-md mx-4 p-8 transform scale-95 opacity-0 transition-all duration-300">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </div>
+        
+        <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Reject Application</h3>
+        <p class="text-gray-600 text-center mb-4">Provide a reason for archiving this application as rejected:</p>
+        
+        <textarea id="rejectionReasonInput" placeholder="e.g., Unclear license photo..." class="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none mb-6 resize-none h-24"></textarea>
+
+        <div class="flex justify-end gap-3">
+            <button onclick="closeRejectConfirm()" class="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+            <button onclick="executeStatusUpdate('Rejected')" class="px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md bg-red-500 hover:bg-red-600">Confirm Rejection</button>
+        </div>
+    </div>
+</div>
+
+<!-- CLIENT-SIDE INTERACTION SCRIPT -->
+<script>
+    // Mock Dataset (Pending and Rejected only)
+    let mockProviders = [
+        { id: 1, name: 'Rendell James Luminous', license_no: 'D06-11-009385', expiry_date: '2026-03-27', plate_no: 'ABCD-123', vehicle_type: 'Sedan', status: 'Pending', rejection_reason: '' },
+        { id: 2, name: 'Moises Padriga', license_no: 'D09-15-667890', expiry_date: '2025-11-10', plate_no: 'QWE-456', vehicle_type: 'Motorcycle', status: 'Rejected', rejection_reason: 'Expired driver license submitted.' }
+    ];
+
+    let currentActiveTab = 'pending';
+    let activeActionId = null;
+    let activeActionName = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        renderTable(currentActiveTab);
+    });
+
+    function switchTab(tabName) {
+        currentActiveTab = tabName;
+        
+        // Update Tab Header Styles
+        ['pending', 'rejected'].forEach(t => {
+            const btn = document.getElementById(`tabBtn-${t}`);
+            if (t === tabName) {
+                btn.className = "pb-4 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]";
+            } else {
+                btn.className = "pb-4 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800";
+            }
+        });
+
+        renderTable(tabName);
+    }
+
+    function renderTable(statusFilter) {
+        const tableBody = document.getElementById('providerTableBody');
+        tableBody.innerHTML = '';
+
+        const filtered = mockProviders.filter(p => {
+            if (statusFilter === 'pending') return p.status === 'Pending';
+            if (statusFilter === 'rejected') return p.status === 'Rejected';
+        });
+
+        if (filtered.length === 0) {
+            tableBody.innerHTML = `
+                <div class="text-center py-12">
+                    <p class="text-gray-500 text-sm">No provider records found in this category.</p>
+                </div>`;
+            return;
+        }
+
+        filtered.forEach(item => {
+            let statusBadge = '';
+            if (item.status === 'Pending') statusBadge = '<span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>';
+            else statusBadge = '<span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">Rejected</span>';
+
+            let actionButtons = '';
+            if (item.status === 'Rejected') {
+                actionButtons = `
+                    <button type="button" onclick="openApproveConfirm(${item.id}, '${item.name}')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-sm">
+                        Restore
+                    </button>`;
+            } else {
+                actionButtons = `
+                    <button type="button" onclick="openApproveConfirm(${item.id}, '${item.name}')" class="bg-[#2D9B63] hover:bg-[#258253] text-white font-semibold text-xs px-5 py-2 rounded-lg transition shadow-sm">
+                        Approve
+                    </button>
+                    <button type="button" onclick="openRejectConfirm(${item.id}, '${item.name}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-5 py-2 rounded-lg transition">
+                        Reject
+                    </button>`;
+            }
+
+            const rowHTML = `
+                <div onclick="openVerificationModal(${item.id})" class="grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+                    <div class="col-span-1 text-sm font-medium text-gray-800">US${item.id}</div>
+                    <div class="col-span-2 text-sm font-medium text-gray-800">
+                        ${item.name}
+                        ${item.status === 'Rejected' && item.rejection_reason ? `<p class="text-xs text-red-500 truncate max-w-xs mt-0.5">Reason: ${item.rejection_reason}</p>` : ''}
+                    </div>
+                    <div class="col-span-1 text-sm text-gray-600">
+                        <div class="font-medium text-gray-800">${item.plate_no}</div>
+                        <div class="text-xs text-gray-500">${item.vehicle_type}</div>
+                    </div>
+                    <div class="col-span-1 flex items-center justify-center">${statusBadge}</div>
+                    <div class="col-span-2 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                        ${actionButtons}
+                    </div>
+                </div>`;
+            tableBody.innerHTML += rowHTML;
+        });
+    }
+
+    // Modal UI Controllers
+    function openVerificationModal(id) {
+        const item = mockProviders.find(p => p.id === id);
+        if (!item) return;
+
+        activeActionId = item.id;
+        activeActionName = item.name;
+
+        document.getElementById('modalProviderId').innerText = 'US' + item.id;
+        document.getElementById('modalName').innerText = item.name;
+        document.getElementById('modalLicenseNo').innerText = item.license_no;
+        document.getElementById('modalExpiryDate').innerText = item.expiry_date;
+        document.getElementById('modalVehicleInfo').innerText = `${item.plate_no} (${item.vehicle_type})`;
+
+        const rejBox = document.getElementById('rejectionReasonBox');
+        if (item.status === 'Rejected') {
+            rejBox.classList.remove('hidden');
+            document.getElementById('modalRejectionReasonText').innerText = item.rejection_reason;
+        } else {
+            rejBox.classList.add('hidden');
+        }
+
+        const badge = document.getElementById('modalStatusBadge');
+        badge.innerText = item.status;
+        badge.className = item.status === 'Rejected' ? "px-4 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-sm border border-red-200" :
+                          "px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100";
+
+        const modal = document.getElementById('verificationModal');
+        const content = document.getElementById('modalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
     }
 
     function closeVerificationModal() {
-        modalContent.classList.remove('scale-100', 'opacity-100');
-        modalContent.classList.add('scale-95', 'opacity-0');
+        const modal = document.getElementById('verificationModal');
+        const content = document.getElementById('modalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function openApproveConfirm(id, name) {
+        activeActionId = id;
+        activeActionName = name;
+        document.getElementById('approveConfirmText').innerHTML = `Are you sure you want to approve/restore <b>${name}</b> (US${id})?`;
         
-        setTimeout(() => {
-            verificationModal.classList.add('hidden');
-        }, 300);
+        const modal = document.getElementById('approveConfirmModal');
+        const content = document.getElementById('approveConfirmContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+    }
+
+    function triggerApproveFromModal() {
+        closeVerificationModal();
+        if (activeActionId && activeActionName) openApproveConfirm(activeActionId, activeActionName);
+    }
+
+    function closeApproveConfirm() {
+        const modal = document.getElementById('approveConfirmModal');
+        const content = document.getElementById('approveConfirmContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function openRejectConfirm(id, name) {
+        activeActionId = id;
+        activeActionName = name;
+        document.getElementById('rejectionReasonInput').value = '';
+        
+        const modal = document.getElementById('rejectConfirmModal');
+        const content = document.getElementById('rejectConfirmContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
+    }
+
+    function triggerRejectFromModal() {
+        closeVerificationModal();
+        if (activeActionId && activeActionName) openRejectConfirm(activeActionId, activeActionName);
+    }
+
+    function closeRejectConfirm() {
+        const modal = document.getElementById('rejectConfirmModal');
+        const content = document.getElementById('rejectConfirmContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    function executeStatusUpdate(targetStatus) {
+        const reason = targetStatus === 'Rejected' ? document.getElementById('rejectionReasonInput').value : '';
+        
+        const provider = mockProviders.find(p => p.id === activeActionId);
+        if (provider) {
+            provider.status = targetStatus === 'Approved' ? 'Approved (Moved to Users)' : 'Rejected';
+            provider.rejection_reason = reason;
+        }
+
+        closeApproveConfirm();
+        closeRejectConfirm();
+        
+        // If approved, simulate graduation out of queue; if rejected, shift to rejected tab
+        if (targetStatus === 'Approved') {
+            mockProviders = mockProviders.filter(p => p.id !== activeActionId);
+            renderTable(currentActiveTab);
+        } else {
+            switchTab('rejected');
+        }
     }
 </script>
 {% endblock %}
