@@ -304,3 +304,18 @@ def custom_logout(request):
     if 'is_mock_logged_in' in request.session:
         del request.session['is_mock_logged_in']
     return redirect('login')
+
+def messages_view(request):
+    conversations = []
+    current_tab = request.GET.get('tab', 'all')
+    context = {
+        'conversations': conversations,
+        'current_tab': current_tab,
+    }
+    return render(request, 'messages.html', context)
+
+def message_thread_api(request, room_id):
+    return JsonResponse({'messages': [], 'delivery_id': 0})
+
+def send_message_api(request, room_id):
+    return JsonResponse({'status': 'success'})

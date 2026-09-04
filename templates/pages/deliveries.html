@@ -5,13 +5,15 @@
 
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
-    
+
+    <!-- Page Header -->
     <div class="flex justify-between items-center mb-6 px-2">
         <h1 class="text-[28px] font-bold text-gray-800">Delivery Management</h1>
     </div>
 
+    <!-- Main Container Card -->
     <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
-        
+
         <!-- Standardized Table Header -->
         <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
             <div class="col-span-1">Delivery ID</div>
@@ -22,27 +24,88 @@
             <div class="col-span-1">Escrow Status</div>
         </div>
 
+        <!-- Table Body -->
         <div class="flex flex-col space-y-1">
             {% for delivery in deliveries %}
-            <!-- Standardized Hover State -->
-            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors border-b border-gray-100 last:border-0 cursor-pointer">
-                
-                <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.id }}</div>
+            <!-- All data passed cleanly via data attributes to prevent JS IDE errors -->
+            <div onclick="openDeliveryModalFromElement(this)"
+                 data-id="{{ delivery.id }}"
+                 data-sender="{{ delivery.sender }}"
+                 data-sender-phone="{{ delivery.sender_phone|default:'—' }}"
+                 data-provider="{{ delivery.provider }}"
+                 data-provider-vehicle="{{ delivery.provider_vehicle|default:'—' }}"
+                 data-status="{{ delivery.status }}"
+                 data-delivery-type="{{ delivery.delivery_type|default:'—' }}"
+                 data-emergency-type="{{ delivery.emergency_type|default:'' }}"
+                 data-emergency="{{ delivery.emergency|default:'None' }}"
+                 data-emergency-status="{{ delivery.emergency_status|default:'' }}"
+                 data-escrow="{{ delivery.escrow_status }}"
+                 data-escrow-id="{{ delivery.escrow_id|default:'' }}"
+                 data-room-id="{{ delivery.chat_room_id|default:'' }}"
+                 data-escrow-amount="{{ delivery.escrow_amount|default:'0.00' }}"
+                 data-escrow-frozen="{{ delivery.escrow_frozen|yesno:'true,false' }}"
+                 data-pickup-address="{{ delivery.pickup_address|default:'—' }}"
+                 data-dropoff-address="{{ delivery.dropoff_address|default:'—' }}"
+                 data-requested-at="{{ delivery.requested_at|date:'M d, Y — h:i A'|default:'—' }}"
+                 data-accepted-at="{{ delivery.accepted_at|date:'M d, Y — h:i A'|default:'—' }}"
+                 data-eta="{{ delivery.eta|date:'M d, Y — h:i A'|default:'—' }}"
+                 data-completed-at="{{ delivery.completed_at|date:'M d, Y — h:i A'|default:'' }}"
+                 data-pickup-verified="{{ delivery.pickup_verified|yesno:'true,false' }}"
+                 data-dropoff-verified="{{ delivery.dropoff_verified|yesno:'true,false' }}"
+                 data-cargo-description="{{ delivery.cargo_description|default:'No description provided.' }}"
+                 data-cargo-weight="{{ delivery.cargo_weight|default:'—' }}"
+                 data-cargo-dimensions="{{ delivery.cargo_dimensions|default:'—' }}"
+                 data-box-small="{{ delivery.box_small|default:'0' }}"
+                 data-box-medium="{{ delivery.box_medium|default:'0' }}"
+                 data-box-large="{{ delivery.box_large|default:'0' }}"
+                 data-fragile="{{ delivery.is_fragile|yesno:'true,false' }}"
+                 data-cargo-photo="{{ delivery.cargo_photo|default:'' }}"
+                 data-base-fee="{{ delivery.base_fee|default:'0.00' }}"
+                 data-service-fee="{{ delivery.service_fee|default:'0.00' }}"
+                 data-penalty-fee="{{ delivery.penalty_fee|default:'0.00' }}"
+                 data-total-amount="{{ delivery.total_amount|default:'0.00' }}"
+                 data-payment-method="{{ delivery.payment_method|default:'—' }}"
+                 data-payment-status="{{ delivery.payment_status|default:'—' }}"
+                 data-escrow-tx-hash="{{ delivery.escrow_tx_hash|default:'' }}"
+                 data-transaction-tx-hash="{{ delivery.transaction_tx_hash|default:'' }}"
+                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors border-b border-gray-100 last:border-0 cursor-pointer group">
+
+                <div class="col-span-1 text-sm font-bold text-gray-800">#{{ delivery.id }}</div>
                 <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.sender }}</div>
                 <div class="col-span-1 text-sm font-medium text-gray-800">{{ delivery.provider }}</div>
 
+                <!-- Delivery Status Badge -->
                 <div class="col-span-1">
                     {% if delivery.status == 'Pending' %}
                         <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
-                    {% elif delivery.status == 'Delivered' %}
-                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Delivered</span>
+                    {% elif delivery.status == 'Delivered' or delivery.status == 'Completed' %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">{{ delivery.status }}</span>
+                    {% elif delivery.status == 'Cancelled' %}
+                        <span class="px-4 py-1.5 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Cancelled</span>
                     {% else %}
                         <span class="px-4 py-1.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">{{ delivery.status }}</span>
                     {% endif %}
                 </div>
 
-                <div class="col-span-1 text-sm text-gray-600">{{ delivery.emergency }}</div>
-                <div class="col-span-1 text-sm font-semibold text-gray-700">{{ delivery.escrow_status }}</div>
+                <!-- Emergency Indicator -->
+                <div class="col-span-1 text-sm font-medium">
+                    {% if delivery.emergency and delivery.emergency != 'None' and delivery.emergency != '-' %}
+                        <span class="flex items-center gap-1.5 text-red-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Active
+                        </span>
+                    {% else %}
+                        <span class="text-gray-400">—</span>
+                    {% endif %}
+                </div>
+
+                <!-- Escrow Status -->
+                <div class="col-span-1 text-sm font-semibold text-gray-700">
+                    {{ delivery.escrow_status }}
+                    {% if delivery.escrow_frozen %}
+                        <span class="ml-1 text-[10px] font-bold text-red-500 align-middle">FROZEN</span>
+                    {% endif %}
+                </div>
 
             </div>
             {% empty %}
@@ -53,4 +116,618 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- DELIVERY DETAILS OVERLAY MODAL             -->
+<!-- ========================================== -->
+<div id="deliveryModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <!-- Dark transparent backdrop -->
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeDeliveryModal()"></div>
+
+    <!-- Modal Content Box -->
+    <div id="modalContent" class="relative bg-white rounded-xl shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0">
+            <div class="flex items-center gap-3">
+                <h2 class="text-2xl font-bold text-gray-900">Delivery Details</h2>
+                <span id="modalDelId" class="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-md">#000</span>
+                <span id="modalTypeBadge" class="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-md">—</span>
+            </div>
+            <button onclick="closeDeliveryModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Dynamic Emergency Banner -->
+        <div id="modalEmergencyBanner" class="hidden bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between gap-3 text-red-700 shrink-0">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-wide mb-0.5">
+                        Active Emergency Reported <span id="modalEmergencyType" class="font-medium normal-case text-red-500"></span>
+                    </p>
+                    <p id="modalEmergencyText" class="text-xs font-medium">Driver reported an issue. Escrow is currently frozen.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="focusDeliveryChat()" class="bg-white hover:bg-red-50 text-red-600 text-xs font-bold px-4 py-2 rounded-lg border border-red-200 transition-colors">
+                    Message Provider
+                </button>
+                <a id="modalInvestigateLink" href="#" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors">
+                    Investigate in Dispute Center
+                </a>
+            </div>
+        </div>
+
+        <!-- Scrollable Main Body -->
+        <div class="p-6 flex flex-col md:flex-row gap-6 overflow-y-auto">
+
+            <!-- Left Side: Route, Timeline & Package Info -->
+            <div class="flex-1 flex flex-col gap-4">
+
+                <!-- Logistics & Route -->
+                <div class="bg-[#F5F6F8] rounded-lg border border-gray-300 overflow-hidden">
+                    <div class="bg-[#E4E6EB] px-4 py-2 border-b border-gray-300 flex justify-between items-center">
+                        <span class="text-gray-800 text-[15px] font-medium">Logistics &amp; Route</span>
+                        <span id="modalStatusBadge" class="px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100">Pending</span>
+                    </div>
+
+                    <div class="p-5 space-y-6">
+                        <!-- Route Timeline -->
+                        <div class="relative pl-6 space-y-6 before:absolute before:inset-y-0 before:left-2 before:w-0.5 before:bg-gray-300">
+                            <!-- Pickup -->
+                            <div class="relative">
+                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-blue-500 border-4 border-[#F5F6F8]"></div>
+                                <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Pickup Location</h3>
+                                <p id="modalPickupAddress" class="text-[15px] text-gray-800 font-medium">Cebu City Logistics Hub</p>
+                            </div>
+                            <!-- Dropoff -->
+                            <div class="relative">
+                                <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-green-500 border-4 border-[#F5F6F8]"></div>
+                                <h3 class="text-xs font-bold text-gray-400 uppercase mb-1">Dropoff Location</h3>
+                                <p id="modalDropoffAddress" class="text-[15px] text-gray-800 font-medium">Recipient Destination Address</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verification Timeline -->
+                <div class="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+                    <div class="bg-[#F8F9FA] px-4 py-2 border-b border-gray-200">
+                        <span class="text-gray-800 text-[15px] font-medium">Delivery Timeline &amp; QR Verification</span>
+                    </div>
+                    <div class="p-5 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Requested</p>
+                            <p id="modalRequestedAt" class="font-medium text-gray-800">—</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Accepted</p>
+                            <p id="modalAcceptedAt" class="font-medium text-gray-800">—</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Estimated Arrival</p>
+                            <p id="modalEta" class="font-medium text-gray-800">—</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Completed</p>
+                            <p id="modalCompletedAt" class="font-medium text-gray-800">—</p>
+                        </div>
+                        <div class="col-span-2 border-t border-gray-100 pt-4 flex items-center gap-6">
+                            <div class="flex items-center gap-2">
+                                <span id="modalPickupVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
+                                <span class="text-xs font-semibold text-gray-600">Pickup QR Verified</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="modalDropoffVerifiedIcon" class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300">?</span>
+                                <span class="text-xs font-semibold text-gray-600">Dropoff QR Verified</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Package Summary -->
+                <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase">Package Details</h3>
+                        <span id="modalFragileBadge" class="hidden px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[11px] font-bold">FRAGILE</span>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div id="modalCargoPhotoWrap" class="w-16 h-16 bg-orange-50 rounded-lg flex items-center justify-center text-2xl overflow-hidden shrink-0">
+                            <span id="modalCargoPhotoFallback">📦</span>
+                            <img id="modalCargoPhoto" src="" alt="Cargo photo" class="hidden w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <p id="modalCargoDescription" class="text-sm font-bold text-gray-800">Standard Micro-Move Item</p>
+                            <p class="text-xs text-gray-500 mt-1">Verified shared-capacity cargo</p>
+                            <div class="grid grid-cols-3 gap-3 mt-3 text-xs">
+                                <div>
+                                    <p class="text-gray-400 font-semibold uppercase">Weight</p>
+                                    <p id="modalCargoWeight" class="text-gray-800 font-medium">—</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 font-semibold uppercase">Dimensions</p>
+                                    <p id="modalCargoDimensions" class="text-gray-800 font-medium">—</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 font-semibold uppercase">Boxes (S/M/L)</p>
+                                    <p id="modalCargoBoxes" class="text-gray-800 font-medium">—</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Participants & Financials -->
+            <div class="w-full md:w-[420px] flex flex-col gap-4">
+
+                <!-- Sender / Provider Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Sender</h3>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">S</div>
+                            <div class="min-w-0">
+                                <p id="modalSenderName" class="text-[15px] font-bold text-gray-800 truncate">Sender Name</p>
+                                <span id="modalSenderPhone" class="text-xs text-gray-500">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Provider</h3>
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-lg shrink-0">P</div>
+                            <div class="min-w-0">
+                                <p id="modalProviderName" class="text-[15px] font-bold text-gray-800 truncate">Provider Name</p>
+                                <span id="modalProviderVehicle" class="text-xs text-gray-500">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Escrow & Financials -->
+                <div class="bg-white rounded-lg border border-gray-300 shadow-sm p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase">Escrow &amp; Payment</h3>
+                        <span id="modalEscrowBadge" class="text-sm font-bold text-gray-900">On Hold</span>
+                    </div>
+
+                    <div class="bg-[#F8F9FA] rounded-lg p-3 border border-gray-200 mb-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-semibold text-gray-500">Funds Currently on Hold</span>
+                            <span id="modalEscrowAmount" class="text-lg font-bold text-gray-900">₱0.00</span>
+                        </div>
+                        <p id="modalEscrowFrozenNote" class="hidden text-[11px] font-semibold text-red-600 mt-1">Frozen — hold triggered by a reported emergency/dispute.</p>
+                    </div>
+
+                    <!-- Fee Breakdown -->
+                    <div class="space-y-1.5 text-xs mb-3">
+                        <div class="flex justify-between"><span class="text-gray-500">Base Fee</span><span id="modalBaseFee" class="font-medium text-gray-800">₱0.00</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Service Fee</span><span id="modalServiceFee" class="font-medium text-gray-800">₱0.00</span></div>
+                        <div id="modalPenaltyRow" class="hidden justify-between"><span class="text-gray-500">Penalty Fee</span><span id="modalPenaltyFee" class="font-medium text-red-600">₱0.00</span></div>
+                        <div class="flex justify-between border-t border-gray-100 pt-1.5 font-bold"><span class="text-gray-700">Total</span><span id="modalTotalAmount" class="text-gray-900">₱0.00</span></div>
+                    </div>
+
+                    <div class="flex justify-between text-xs mb-3">
+                        <span class="text-gray-500">Payment Method</span>
+                        <span id="modalPaymentMethod" class="font-semibold text-gray-800">—</span>
+                    </div>
+
+                    <!-- Blockchain proof -->
+                    <div class="text-[11px] text-gray-400 font-mono truncate mb-4" id="modalTxHash" title="">—</div>
+
+                    <!-- Admin Actions (mirrors Escrow & Payments: Refund / Freeze / Release) -->
+                    <div class="flex flex-col gap-2">
+                        <button id="btnReleaseEscrow" onclick="submitEscrowAction('release')"
+                            class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
+                            Release Payment to Provider
+                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btnFreezeEscrow" onclick="submitEscrowAction('freeze')"
+                                class="bg-[#FFEEDD] hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-[#D47A4A] text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
+                                Freeze
+                            </button>
+                            <button id="btnRefundEscrow" onclick="submitEscrowAction('refund')"
+                                class="bg-red-50 hover:bg-red-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-red-600 text-xs font-bold px-4 py-2.5 rounded-lg transition-colors">
+                                Refund Sender
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reported Issue / Dispute -->
+                <div id="modalIssueCard" class="hidden bg-white rounded-lg border border-red-200 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-red-500 uppercase mb-2">Reported Issue</h3>
+                    <div class="flex justify-between items-start gap-2">
+                        <div>
+                            <p id="modalIssueType" class="text-sm font-bold text-gray-800">—</p>
+                            <p id="modalIssueDescription" class="text-xs text-gray-600 mt-1">—</p>
+                        </div>
+                        <span id="modalIssueStatus" class="shrink-0 px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold">—</span>
+                    </div>
+                </div>
+
+                <!-- Delivery Chat Panel -->
+                <div class="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+                    <button type="button" onclick="toggleDeliveryChat()" class="w-full flex justify-between items-center px-4 py-3 bg-[#F8F9FA] hover:bg-gray-100 transition-colors">
+                        <span class="text-xs font-bold text-gray-500 uppercase">Delivery Chat</span>
+                        <span id="dmChatToggleIcon" class="text-gray-400 text-xs">Show</span>
+                    </button>
+
+                    <div id="dmChatBody" class="hidden">
+                        <div id="dmChatMessages" class="h-56 overflow-y-auto px-4 py-3 space-y-2.5 bg-[#FAFAFA] border-t border-gray-100"></div>
+                        <div class="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100">
+                            <input id="dmChatInput" type="text" placeholder="Message the sender & provider..."
+                                onkeydown="if(event.key==='Enter'){sendDeliveryChatMessage();}"
+                                class="flex-1 bg-gray-100 border-none rounded-full px-3.5 py-2 text-xs placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+                            <button onclick="sendDeliveryChatMessage()" class="bg-[#FF751F] hover:bg-[#e6691c] text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shrink-0">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            </button>
+                        </div>
+                        <a id="dmChatOpenFull" href="#" class="block text-center text-[11px] font-semibold text-gray-400 hover:text-[#FF751F] py-2 border-t border-gray-100 transition-colors">
+                            Open in full Messages inbox →
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-end items-center gap-3 shrink-0">
+            <button onclick="closeDeliveryModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold px-6 py-2.5 rounded-lg transition-colors">
+                Close
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('deliveryModal');
+    const modalContent = document.getElementById('modalContent');
+    let currentDelivery = {};
+
+    // FIXED: Variables inside the <script> block wrapped in quotes, mapped through JS parser 
+    // to bypass code editor 'Declaration or statement expected' errors.
+    const CURRENT_ADMIN_USER_ID = Number("{{ request.user.id|default:'0' }}") || null;
+    let dmChatPollTimer = null;
+
+    function peso(value) {
+        const n = parseFloat(value);
+        if (isNaN(n)) return '₱0.00';
+        return '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function setVerifiedIcon(elId, verified) {
+        const el = document.getElementById(elId);
+        if (verified) {
+            el.textContent = '✓';
+            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-green-500';
+        } else {
+            el.textContent = '—';
+            el.className = 'w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold bg-gray-300';
+        }
+    }
+
+    function openDeliveryModalFromElement(element) {
+        const d = element.dataset;
+        currentDelivery = { ...d };
+
+        document.getElementById('modalDelId').innerText = '#' + d.id;
+        document.getElementById('modalTypeBadge').innerText = d.deliveryType || '—';
+        document.getElementById('modalSenderName').innerText = d.sender;
+        document.getElementById('modalSenderPhone').innerText = d.senderPhone || '—';
+        document.getElementById('modalProviderName').innerText = d.provider;
+        document.getElementById('modalProviderVehicle').innerText = d.providerVehicle || '—';
+
+        // Route
+        document.getElementById('modalPickupAddress').innerText = d.pickupAddress || '—';
+        document.getElementById('modalDropoffAddress').innerText = d.dropoffAddress || '—';
+
+        // Timeline
+        document.getElementById('modalRequestedAt').innerText = d.requestedAt || '—';
+        document.getElementById('modalAcceptedAt').innerText = d.acceptedAt || '—';
+        document.getElementById('modalEta').innerText = d.eta || '—';
+        document.getElementById('modalCompletedAt').innerText = d.completedAt || 'Not yet completed';
+        setVerifiedIcon('modalPickupVerifiedIcon', d.pickupVerified === 'true');
+        setVerifiedIcon('modalDropoffVerifiedIcon', d.dropoffVerified === 'true');
+
+        // Package
+        document.getElementById('modalCargoDescription').innerText = d.cargoDescription || 'No description provided.';
+        document.getElementById('modalCargoWeight').innerText = d.cargoWeight && d.cargoWeight !== '—' ? d.cargoWeight + ' kg' : '—';
+        document.getElementById('modalCargoDimensions').innerText = d.cargoDimensions || '—';
+        document.getElementById('modalCargoBoxes').innerText = `${d.boxSmall || 0} / ${d.boxMedium || 0} / ${d.boxLarge || 0}`;
+        document.getElementById('modalFragileBadge').classList.toggle('hidden', d.fragile !== 'true');
+
+        const photo = document.getElementById('modalCargoPhoto');
+        const fallback = document.getElementById('modalCargoPhotoFallback');
+        if (d.cargoPhoto) {
+            photo.src = d.cargoPhoto;
+            photo.classList.remove('hidden');
+            fallback.classList.add('hidden');
+        } else {
+            photo.classList.add('hidden');
+            fallback.classList.remove('hidden');
+        }
+
+        // Handle Delivery Status Badge
+        const statusBadge = document.getElementById('modalStatusBadge');
+        statusBadge.innerText = d.status;
+        if (d.status === 'Delivered' || d.status === 'Completed') {
+            statusBadge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
+        } else if (d.status === 'Pending') {
+            statusBadge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
+        } else if (d.status === 'Cancelled') {
+            statusBadge.className = "px-3 py-0.5 rounded-full bg-gray-200 text-gray-600 font-semibold text-xs border border-gray-300";
+        } else {
+            statusBadge.className = "px-3 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs border border-blue-200";
+        }
+
+        // Handle Escrow Status + amounts
+        const escrow = d.escrow;
+        const frozen = d.escrowFrozen === 'true';
+        const escrowBadge = document.getElementById('modalEscrowBadge');
+        escrowBadge.innerText = frozen ? escrow + ' (Frozen)' : escrow;
+        if (escrow === 'Released') escrowBadge.className = "text-sm font-bold text-green-600";
+        else if (frozen) escrowBadge.className = "text-sm font-bold text-red-600";
+        else if (escrow === 'Refunded' || escrow === 'Partially Refunded') escrowBadge.className = "text-sm font-bold text-orange-600";
+        else escrowBadge.className = "text-sm font-bold text-gray-900";
+
+        document.getElementById('modalEscrowAmount').innerText = peso(d.escrowAmount);
+        document.getElementById('modalEscrowFrozenNote').classList.toggle('hidden', !frozen);
+
+        document.getElementById('modalBaseFee').innerText = peso(d.baseFee);
+        document.getElementById('modalServiceFee').innerText = peso(d.serviceFee);
+        const penalty = parseFloat(d.penaltyFee || '0');
+        document.getElementById('modalPenaltyRow').classList.toggle('hidden', !(penalty > 0));
+        document.getElementById('modalPenaltyRow').classList.toggle('flex', penalty > 0);
+        document.getElementById('modalPenaltyFee').innerText = peso(d.penaltyFee);
+        document.getElementById('modalTotalAmount').innerText = peso(d.totalAmount);
+        document.getElementById('modalPaymentMethod').innerText = `${d.paymentMethod || '—'} · ${d.paymentStatus || '—'}`;
+
+        const txEl = document.getElementById('modalTxHash');
+        if (d.escrowTxHash) {
+            txEl.innerText = 'Escrow tx: ' + d.escrowTxHash;
+            txEl.title = d.escrowTxHash;
+        } else {
+            txEl.innerText = 'Not yet recorded on-chain';
+            txEl.title = '';
+        }
+
+        // Escrow action button states
+        const btnRelease = document.getElementById('btnReleaseEscrow');
+        const btnFreeze = document.getElementById('btnFreezeEscrow');
+        const btnRefund = document.getElementById('btnRefundEscrow');
+        const settled = (escrow === 'Released' || escrow === 'Refunded');
+
+        btnRelease.disabled = settled || frozen;
+        btnRefund.disabled = settled;
+        btnFreeze.disabled = settled;
+        btnFreeze.innerText = frozen ? 'Unfreeze' : 'Freeze';
+
+        // Emergency banner
+        const emergencyBanner = document.getElementById('modalEmergencyBanner');
+        const emergencyText = document.getElementById('modalEmergencyText');
+        const emergencyType = document.getElementById('modalEmergencyType');
+        const investigateLink = document.getElementById('modalInvestigateLink');
+
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            emergencyBanner.classList.remove('hidden');
+            emergencyText.innerText = d.emergency;
+            emergencyType.innerText = d.emergencyType ? '· ' + d.emergencyType : '';
+            investigateLink.href = `/admin/disputes/?delivery_id=${d.id}`;
+        } else {
+            emergencyBanner.classList.add('hidden');
+        }
+
+        const issueCard = document.getElementById('modalIssueCard');
+        if (d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '') {
+            issueCard.classList.remove('hidden');
+            document.getElementById('modalIssueType').innerText = d.emergencyType || 'Reported Issue';
+            document.getElementById('modalIssueDescription').innerText = d.emergency;
+            const statusEl = document.getElementById('modalIssueStatus');
+            statusEl.innerText = d.emergencyStatus || 'Open';
+            statusEl.className = 'shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold ' +
+                (d.emergencyStatus === 'Resolved' ? 'bg-green-100 text-green-700' :
+                 d.emergencyStatus === 'Investigated' ? 'bg-blue-100 text-blue-700' :
+                 'bg-red-100 text-red-600');
+        } else {
+            issueCard.classList.add('hidden');
+        }
+
+        resetDeliveryChat();
+        document.getElementById('dmChatOpenFull').href = `/admin/messages/?room_id=${d.roomId || ''}&delivery_id=${d.id}`;
+        const hasEmergency = d.emergency && d.emergency !== 'None' && d.emergency !== '-' && d.emergency.trim() !== '';
+        if (hasEmergency) {
+            openDeliveryChat();
+        }
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeDeliveryModal() {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+
+        if (dmChatPollTimer) {
+            clearInterval(dmChatPollTimer);
+            dmChatPollTimer = null;
+        }
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    function resetDeliveryChat() {
+        document.getElementById('dmChatBody').classList.add('hidden');
+        document.getElementById('dmChatToggleIcon').innerText = 'Show';
+        document.getElementById('dmChatMessages').innerHTML = '';
+        if (dmChatPollTimer) {
+            clearInterval(dmChatPollTimer);
+            dmChatPollTimer = null;
+        }
+    }
+
+    function toggleDeliveryChat() {
+        const body = document.getElementById('dmChatBody');
+        if (body.classList.contains('hidden')) {
+            openDeliveryChat();
+        } else {
+            resetDeliveryChat();
+        }
+    }
+
+    function openDeliveryChat() {
+        const body = document.getElementById('dmChatBody');
+        body.classList.remove('hidden');
+        document.getElementById('dmChatToggleIcon').innerText = 'Hide';
+
+        if (!currentDelivery.roomId) {
+            document.getElementById('dmChatMessages').innerHTML =
+                '<p class="text-center text-xs text-gray-400 mt-4">No chat room linked to this delivery yet.</p>';
+            return;
+        }
+
+        loadDeliveryChat();
+        if (dmChatPollTimer) clearInterval(dmChatPollTimer);
+        dmChatPollTimer = setInterval(loadDeliveryChat, 4000);
+    }
+
+    function focusDeliveryChat() {
+        openDeliveryChat();
+        document.getElementById('dmChatInput').focus();
+        document.getElementById('dmChatBody').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function dmBubbleClasses(role, isOwn) {
+        if (isOwn) return 'bg-[#FF751F] text-white rounded-2xl rounded-br-md self-end';
+        if (role === 'provider') return 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start';
+        return 'bg-blue-50 border border-blue-100 text-gray-800 rounded-2xl rounded-bl-md self-start';
+    }
+
+    function loadDeliveryChat() {
+        const roomId = currentDelivery.roomId;
+        if (!roomId) return;
+
+        fetch(`/admin/messages/${roomId}/thread/`)
+            .then(res => {
+                if (!res.ok) throw new Error('Failed to load thread');
+                return res.json();
+            })
+            .then(data => {
+                const wrap = document.getElementById('dmChatMessages');
+                wrap.innerHTML = '';
+
+                if (!data.messages || data.messages.length === 0) {
+                    wrap.innerHTML = '<p class="text-center text-xs text-gray-400 mt-4">No messages yet — say hello.</p>';
+                    return;
+                }
+
+                data.messages.forEach(m => {
+                    const isOwn = CURRENT_ADMIN_USER_ID !== null && m.sender_id === CURRENT_ADMIN_USER_ID;
+                    const row = document.createElement('div');
+                    row.className = 'flex flex-col ' + (isOwn ? 'items-end' : 'items-start');
+
+                    const label = document.createElement('span');
+                    label.className = 'text-[10px] font-semibold text-gray-400 mb-0.5 px-1';
+                    label.innerText = `${m.sender_name || m.sender_role} · ${m.sent_at || ''}`;
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'max-w-[85%] px-3 py-2 text-xs ' + dmBubbleClasses(m.sender_role, isOwn);
+                    bubble.innerText = m.message;
+
+                    row.appendChild(label);
+                    row.appendChild(bubble);
+                    wrap.appendChild(row);
+                });
+
+                wrap.scrollTop = wrap.scrollHeight;
+            })
+            .catch(() => {
+                document.getElementById('dmChatMessages').innerHTML =
+                    '<p class="text-center text-xs text-red-400 mt-4">Could not load messages. Retrying shortly…</p>';
+            });
+    }
+
+    function sendDeliveryChatMessage() {
+        const roomId = currentDelivery.roomId;
+        const input = document.getElementById('dmChatInput');
+        const text = input.value.trim();
+        if (!text || !roomId) return;
+
+        input.value = '';
+        input.disabled = true;
+
+        fetch(`/admin/messages/${roomId}/send/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Send failed');
+            return res.json();
+        })
+        .then(() => loadDeliveryChat())
+        .catch(() => {
+            alert('Message could not be sent. Please try again.');
+            input.value = text;
+        })
+        .finally(() => {
+            input.disabled = false;
+            input.focus();
+        });
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    function submitEscrowAction(action) {
+        const escrowId = currentDelivery.escrowId;
+        if (!escrowId) {
+            alert('No escrow record linked to this delivery yet.');
+            return;
+        }
+
+        const confirmMessages = {
+            release: 'Release the held funds to the provider now?',
+            freeze: currentDelivery.escrowFrozen === 'true' ? 'Unfreeze this escrow?' : 'Freeze this escrow pending investigation?',
+            refund: 'Refund the sender for this delivery? This cannot be undone.'
+        };
+        if (!confirm(confirmMessages[action])) return;
+
+        fetch(`/admin/escrow/${escrowId}/${action}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ delivery_id: currentDelivery.id })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Request failed');
+            return res.json();
+        })
+        .then(() => {
+            window.location.reload();
+        })
+        .catch(() => {
+            alert('Could not complete this action. Please try again.');
+        });
+    }
+</script>
 {% endblock %}

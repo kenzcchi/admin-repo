@@ -101,17 +101,21 @@
                             </div>
                         </div>
                         <a id="modalVehicleDocLink" href="#" target="_blank" class="text-[#FF751F] hover:underline text-sm font-bold flex items-center gap-1">
-                            View PDF ↗
+                            View PDF 
                         </a>
                     </div>
                 </div>
             </div>
 
+            <!-- Right Side: Identity Profile Card with First Letter Initial Avatar -->
             <div class="w-full md:w-[320px] bg-white rounded-lg border border-gray-300 shadow-sm p-6 flex flex-col items-center justify-center">
                 <h3 class="text-xs font-bold text-gray-400 uppercase mb-5 tracking-wide text-center w-full">Identity Match</h3>
-                <div class="w-32 h-32 rounded-full border-4 border-[#E2B7A0] p-1 mb-5">
-                    <img id="modalSelfie" src="{% static 'images/user_avatar_placeholder.png' %}" alt="Selfie" class="w-full h-full object-cover rounded-full bg-orange-100">
+                
+                <!-- Dynamic Initial Avatar Circle -->
+                <div class="w-32 h-32 rounded-full border-4 border-[#E2B7A0] p-1 mb-5 flex items-center justify-center bg-[#FF751F] shadow-inner">
+                    <span id="modalAvatarInitial" class="text-white text-5xl font-bold uppercase">U</span>
                 </div>
+                
                 <h2 id="modalName" class="text-xl font-bold text-gray-900 text-center mb-1">User Name</h2>
                 <p class="text-lg text-gray-800 text-center">Provider</p>
             </div>
@@ -181,7 +185,6 @@
 
 <!-- CLIENT-SIDE INTERACTION SCRIPT -->
 <script>
-    // Mock Dataset (Pending and Rejected only)
     let mockProviders = [
         { id: 1, name: 'Rendell James Luminous', license_no: 'D06-11-009385', expiry_date: '2026-03-27', plate_no: 'ABCD-123', vehicle_type: 'Sedan', status: 'Pending', rejection_reason: '' },
         { id: 2, name: 'Moises Padriga', license_no: 'D09-15-667890', expiry_date: '2025-11-10', plate_no: 'QWE-456', vehicle_type: 'Motorcycle', status: 'Rejected', rejection_reason: 'Expired driver license submitted.' }
@@ -198,7 +201,6 @@
     function switchTab(tabName) {
         currentActiveTab = tabName;
         
-        // Update Tab Header Styles
         ['pending', 'rejected'].forEach(t => {
             const btn = document.getElementById(`tabBtn-${t}`);
             if (t === tabName) {
@@ -282,6 +284,10 @@
         document.getElementById('modalLicenseNo').innerText = item.license_no;
         document.getElementById('modalExpiryDate').innerText = item.expiry_date;
         document.getElementById('modalVehicleInfo').innerText = `${item.plate_no} (${item.vehicle_type})`;
+
+        // Dynamically extract and set the first letter of the provider's name as avatar initial
+        const firstLetter = item.name ? item.name.trim().charAt(0).toUpperCase() : 'U';
+        document.getElementById('modalAvatarInitial').innerText = firstLetter;
 
         const rejBox = document.getElementById('rejectionReasonBox');
         if (item.status === 'Rejected') {
@@ -370,7 +376,6 @@
         closeApproveConfirm();
         closeRejectConfirm();
         
-        // If approved, simulate graduation out of queue; if rejected, shift to rejected tab
         if (targetStatus === 'Approved') {
             mockProviders = mockProviders.filter(p => p.id !== activeActionId);
             renderTable(currentActiveTab);

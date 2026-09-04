@@ -18,4 +18,7 @@ urlpatterns = [
     path('reports/', views.reports, name='reports'),
     path('settings/', views.settings_page, name='settings'),
     path('logout/', views.custom_logout, name='logout'),
+    path('admin/messages/', views.messages_view, name='messages'),
+    path('admin/messages/<int:room_id>/thread/', views.message_thread_api, name='message_thread'),
+    path('admin/messages/<int:room_id>/send/', views.send_message_api, name='send_message'),
 ]
