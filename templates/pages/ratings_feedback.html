@@ -6,15 +6,17 @@
 {% block content %}
 <div class="max-w-[1400px] mx-auto">
     
+    <!-- Page Header -->
     <div class="flex justify-between items-center mb-6 px-2">
         <h1 class="text-[28px] font-bold text-gray-800">Ratings & Feedback</h1>
     </div>
 
+    <!-- Main Container Card -->
     <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
-        <!-- Standardized Tab Navigation -->
+        <!-- Tab Navigation -->
         <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
-            <a href="?tab=ratings" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'ratings' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+            <a href="?tab=overview" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'overview' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
                 Ratings Overview
             </a>
             <a href="?tab=disputes" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'disputes' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
@@ -22,53 +24,380 @@
             </a>
         </div>
 
-        {% if current_tab == 'ratings' %}
+        {% if current_tab == 'disputes' %}
+        
+        <!-- ========================================== -->
+        <!-- TAB 2: MANAGE DISPUTES                     -->
+        <!-- ========================================== -->
         <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Review ID</div>
+            <div class="col-span-1">Delivery ID</div>
             <div class="col-span-1">Rating</div>
-            <div class="col-span-1">Provider</div>
-            <div class="col-span-1">Review Comment</div>
+            <div class="col-span-1">Reviewee (Provider)</div>
             <div class="col-span-1">Status</div>
-            <div class="col-span-1">Date</div>
-            <div class="col-span-1">Action</div>
+            <div class="col-span-1 text-right pr-2">Actions</div>
         </div>
 
         <div class="flex flex-col space-y-1">
-            {% for item in reviews %}
-            <div class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm">
+            {% for item in disputes_list %}
+            <div onclick="openReviewModalFromElement(this)"
+                 data-review-id="{{ item.review_id }}"
+                 data-delivery-id="{{ item.delivery_id }}"
+                 data-reviewer-id="{{ item.reviewer_id }}"
+                 data-reviewee-id="{{ item.reviewee_id }}"
+                 data-rating="{{ item.rating }}"
+                 data-review-text="{{ item.review_text }}"
+                 data-tx-hash="{{ item.bc_rating_tx_hash }}"
+                 data-status="Flagged"
+                 data-created-at="{{ item.created_at }}"
+                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
                 
-                <div class="col-span-1 flex flex-col items-start gap-0.5">
-                    <div class="flex text-amber-400 text-sm">
-                        {% for star in item.stars_filled %}★{% endfor %}
-                        {% for star in item.stars_empty %}<span class="text-amber-200">★</span>{% endfor %}
-                    </div>
-                    <span class="text-xs font-semibold text-gray-700">{{ item.rating }}/5</span>
+                <div class="col-span-1 font-bold text-gray-800">#REV-{{ item.review_id }}</div>
+                <div class="col-span-1 font-medium text-gray-800">#DEL-{{ item.delivery_id }}</div>
+                
+                <div class="col-span-1 flex items-center gap-1">
+                    <span class="text-amber-400 font-bold">★</span>
+                    <span class="font-bold text-gray-900">{{ item.rating }}.0</span>
                 </div>
 
-                <div class="col-span-1 font-medium text-gray-800">{{ item.provider }}</div>
-                <div class="col-span-1 text-gray-500 truncate pr-2">{{ item.comment }}</div>
+                <div class="col-span-1 font-semibold text-gray-800">USR-{{ item.reviewee_id }}</div>
 
                 <div class="col-span-1">
-                    {% if item.flagged %}
-                        <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold flex items-center gap-1 w-max">
-                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"></path></svg>
-                            Flagged
-                        </span>
-                    {% else %}
-                        <span class="text-gray-400 font-medium">—</span>
-                    {% endif %}
+                    <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200 inline-flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 6a1 1 0 011-1h12a1 1 0 01.8 1.6L14.25 10l2.55 3.4A1 1 0 0116 15H4a1 1 0 01-1-1V6z"/></svg>
+                        Disputed
+                    </span>
                 </div>
 
-                <div class="col-span-1 text-gray-500 font-medium">{{ item.date }}</div>
-
-                <div class="col-span-1">
-                    <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition whitespace-nowrap">
+                <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    <button type="button" onclick="requestReviewAction('resolve', '{{ item.review_id }}')" class="bg-green-50 hover:bg-green-100 text-green-700 font-semibold text-xs px-3 py-2 rounded-lg transition border border-green-200">
+                        Resolve
+                    </button>
+                    <button type="button" onclick="requestReviewAction('remove', '{{ item.review_id }}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs px-3 py-2 rounded-lg transition border border-red-100">
                         Remove
                     </button>
                 </div>
             </div>
+            {% empty %}
+            <div class="text-center py-16">
+                <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <p class="text-gray-800 font-bold text-base">No Pending Disputes</p>
+                <p class="text-gray-400 text-xs mt-1">All flagged ratings and feedback have been resolved.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+
+        <!-- ========================================== -->
+        <!-- TAB 1: RATINGS OVERVIEW (DEFAULT)          -->
+        <!-- ========================================== -->
+        <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Rating</div>
+            <div class="col-span-1">Provider (Reviewee)</div>
+            <div class="col-span-2">Review Comment</div>
+            <div class="col-span-1">Status</div>
+            <div class="col-span-1 text-right pr-2">Actions</div>
+        </div>
+
+        <div class="flex flex-col space-y-1">
+            {% for item in reviews_list %}
+            <div onclick="openReviewModalFromElement(this)"
+                 data-review-id="{{ item.review_id }}"
+                 data-delivery-id="{{ item.delivery_id }}"
+                 data-reviewer-id="{{ item.reviewer_id }}"
+                 data-reviewee-id="{{ item.reviewee_id }}"
+                 data-rating="{{ item.rating }}"
+                 data-review-text="{{ item.review_text }}"
+                 data-tx-hash="{{ item.bc_rating_tx_hash }}"
+                 data-status="{{ item.status|default:'Active' }}"
+                 data-created-at="{{ item.created_at }}"
+                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
+                
+                <!-- Rating Stars -->
+                <div class="col-span-1 flex flex-col">
+                    <div class="flex items-center text-amber-400 text-xs space-x-0.5">
+                        {% if item.rating >= 1 %}★{% else %}☆{% endif %}
+                        {% if item.rating >= 2 %}★{% else %}☆{% endif %}
+                        {% if item.rating >= 3 %}★{% else %}☆{% endif %}
+                        {% if item.rating >= 4 %}★{% else %}☆{% endif %}
+                        {% if item.rating >= 5 %}★{% else %}☆{% endif %}
+                    </div>
+                    <span class="text-xs font-bold text-gray-500 mt-0.5">{{ item.rating }}/5</span>
+                </div>
+
+                <!-- Provider / Reviewee -->
+                <div class="col-span-1 font-bold text-gray-800">
+                    USR-{{ item.reviewee_id }}
+                </div>
+
+                <!-- Review Text snippet -->
+                <div class="col-span-2 text-gray-600 truncate pr-4 text-xs font-medium">
+                    {{ item.review_text|default:"No comment provided." }}
+                </div>
+
+                <!-- Status Badge -->
+                <div class="col-span-1">
+                    {% if item.status == 'Flagged' %}
+                        <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200 inline-flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 6a1 1 0 011-1h12a1 1 0 01.8 1.6L14.25 10l2.55 3.4A1 1 0 0116 15H4a1 1 0 01-1-1V6z"/></svg>
+                            Flagged
+                        </span>
+                    {% else %}
+                        <span class="text-gray-400 text-xs font-medium">—</span>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    <button type="button" onclick="requestReviewAction('remove', '{{ item.review_id }}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition">
+                        Remove
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-16">
+                <p class="text-gray-500 text-sm">No reviews or feedback records found.</p>
+            </div>
             {% endfor %}
         </div>
         {% endif %}
+
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- DETAILED REVIEW OVERLAY DRAWER             -->
+<!-- ========================================== -->
+<div id="reviewModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeReviewModal()"></div>
+    
+    <div id="reviewModalContent" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-white">
+            <div class="flex items-center gap-3">
+                <h2 class="text-xl font-bold text-gray-900">Review Entry Details</h2>
+                <span id="modalReviewBadge" class="text-xs font-bold text-[#FF751F] bg-orange-50 px-2.5 py-1 rounded-md border border-orange-100">#REV-000</span>
+            </div>
+            <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
+            
+            <!-- Rating Header Card -->
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Given Rating</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div id="modalStarContainer" class="flex text-amber-400 text-lg"></div>
+                        <span id="modalRatingScore" class="text-xl font-black text-gray-900">0.0</span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Associated Delivery</p>
+                    <p id="modalDeliveryId" class="text-base font-bold text-[#FF751F] hover:underline cursor-pointer mt-0.5">#DEL-000</p>
+                </div>
+            </div>
+
+            <!-- Review Text Block -->
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Submitted Feedback Comment</p>
+                <p id="modalReviewText" class="text-sm font-medium text-gray-700 leading-relaxed italic bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    "No feedback text provided."
+                </p>
+            </div>
+
+            <!-- Participants Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">R</div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Reviewer ID</p>
+                        <p id="modalReviewerId" class="text-sm font-bold text-gray-800">USR-000</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-orange-50 text-[#FF751F] flex items-center justify-center font-bold text-sm shrink-0">P</div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Reviewee (Provider)</p>
+                        <p id="modalRevieweeId" class="text-sm font-bold text-gray-800">USR-000</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blockchain Hash Proof -->
+            <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">On-Chain Rating Ledger Hash</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 font-mono text-xs text-gray-600 break-all flex items-center justify-between">
+                    <span id="modalTxHash">0x000...000</span>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-bold hover:underline text-[11px] shrink-0 ml-2">
+                        Copy
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center shrink-0">
+            <p id="modalTimestamp" class="text-xs text-gray-400 font-medium">Logged: —</p>
+            <div class="flex items-center gap-2">
+                <button id="btnModalRemove" onclick="triggerReviewFromModal('remove')" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold px-4 py-2 rounded-lg transition border border-red-100">
+                    Remove Review
+                </button>
+                <button onclick="closeReviewModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-5 py-2 rounded-lg transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CUSTOM ACTION CONFIRMATION MODAL           -->
+<!-- ========================================== -->
+<div id="confirmReviewModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeConfirmReviewModal()"></div>
+    
+    <div id="confirmReviewModalContent" class="relative bg-white rounded-3xl p-6 shadow-2xl w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
+        
+        <!-- Status Icon -->
+        <div id="confirmReviewIconContainer" class="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors">
+            <svg id="confirmReviewIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="confirmReviewIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <h3 id="confirmReviewTitle" class="text-xl font-extrabold text-gray-900 mb-2">Confirm Action</h3>
+        <p id="confirmReviewMessage" class="text-sm text-gray-500 font-medium mb-6 px-2">Are you sure you want to proceed with this action?</p>
+
+        <!-- Buttons -->
+        <div class="flex items-center justify-center gap-3 w-full">
+            <button type="button" onclick="closeConfirmReviewModal()" class="flex-1 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors">
+                Cancel
+            </button>
+            <button type="button" id="confirmReviewSubmitBtn" onclick="submitConfirmedReviewAction()" class="flex-1 py-2.5 text-sm font-bold text-white rounded-xl transition shadow-sm">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeModalReviewId = null;
+    let pendingReviewActionData = null;
+
+    function openReviewModalFromElement(element) {
+        const d = element.dataset;
+        activeModalReviewId = d.reviewId;
+
+        document.getElementById('modalReviewBadge').innerText = '#REV-' + d.reviewId;
+        document.getElementById('modalDeliveryId').innerText = '#DEL-' + d.deliveryId;
+        document.getElementById('modalReviewerId').innerText = 'USR-' + d.reviewerId;
+        document.getElementById('modalRevieweeId').innerText = 'USR-' + d.revieweeId;
+        document.getElementById('modalRatingScore').innerText = parseFloat(d.rating).toFixed(1);
+        document.getElementById('modalReviewText').innerText = d.reviewText ? `"${d.reviewText}"` : 'No text feedback provided.';
+        document.getElementById('modalTimestamp').innerText = 'Created At: ' + d.createdAt;
+
+        // Render dynamic rating stars
+        const numRating = parseInt(d.rating, 10) || 0;
+        let starHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            starHTML += i <= numRating ? '★' : '☆';
+        }
+        document.getElementById('modalStarContainer').innerHTML = starHTML;
+
+        // Blockchain TX Hash
+        const txEl = document.getElementById('modalTxHash');
+        txEl.innerText = d.txHash && d.txHash !== '' ? d.txHash : 'No on-chain transaction hash recorded.';
+
+        showReviewModal();
+    }
+
+    function showReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        const content = document.getElementById('reviewModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeReviewModal() {
+        const modal = document.getElementById('reviewModal');
+        const content = document.getElementById('reviewModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    /* CUSTOM CONFIRMATION MODAL LOGIC */
+    function requestReviewAction(action, reviewId) {
+        pendingReviewActionData = { action, reviewId };
+        
+        const titleEl = document.getElementById('confirmReviewTitle');
+        const msgEl = document.getElementById('confirmReviewMessage');
+        const btnEl = document.getElementById('confirmReviewSubmitBtn');
+        const iconContainer = document.getElementById('confirmReviewIconContainer');
+        const iconPath = document.getElementById('confirmReviewIconPath');
+
+        if (action === 'remove') {
+            titleEl.innerText = 'Remove Review';
+            msgEl.innerText = `Are you sure you want to remove review #REV-${reviewId}? This action cannot be undone.`;
+            btnEl.innerText = 'Yes, Remove';
+            btnEl.className = 'flex-1 py-2.5 text-sm font-bold text-white rounded-xl bg-red-600 hover:bg-red-700 transition shadow-sm';
+            iconContainer.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600';
+            iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12');
+        } else if (action === 'resolve') {
+            titleEl.innerText = 'Resolve Dispute';
+            msgEl.innerText = `Are you sure you want to mark dispute for review #REV-${reviewId} as resolved?`;
+            btnEl.innerText = 'Yes, Resolve';
+            btnEl.className = 'flex-1 py-2.5 text-sm font-bold text-white rounded-xl bg-[#2D9B63] hover:bg-[#258253] transition shadow-sm';
+            iconContainer.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-green-100 text-green-600';
+            iconPath.setAttribute('d', 'M5 13l4 4L19 7');
+        }
+
+        const modal = document.getElementById('confirmReviewModal');
+        const content = document.getElementById('confirmReviewModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerReviewFromModal(action) {
+        if (activeModalReviewId) {
+            requestReviewAction(action, activeModalReviewId);
+        }
+    }
+
+    function closeConfirmReviewModal() {
+        const modal = document.getElementById('confirmReviewModal');
+        const content = document.getElementById('confirmReviewModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    }
+
+    function submitConfirmedReviewAction() {
+        if (!pendingReviewActionData) return;
+        
+        console.log(`Executing ${pendingReviewActionData.action} on Review ID: ${pendingReviewActionData.reviewId}`);
+        
+        closeConfirmReviewModal();
+        closeReviewModal();
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,463 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Escrow & Payments - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-800">Escrow & Payments</h1>
+    </div>
+
+    <!-- Main Container Card -->
+    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
+        
+        <!-- Standardized Tab Navigation -->
+        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
+            <a href="?tab=active" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'active' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Active Escrow
+            </a>
+            <a href="?tab=history" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'history' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Transaction History
+            </a>
+        </div>
+
+        {% if current_tab == 'active' %}
+        <!-- Active Escrow Table Header -->
+        <div class="grid grid-cols-5 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Escrow ID</div>
+            <div class="col-span-1">Delivery ID</div>
+            <div class="col-span-1">Amount</div>
+            <div class="col-span-1">Status</div>
+            <div class="col-span-1 text-right pr-2">Actions</div>
+        </div>
+
+        <!-- Active Escrow Table Body -->
+        <div class="flex flex-col space-y-1">
+            {% for item in escrow_list %}
+            <div onclick="openEscrowModalFromElement(this)"
+                 data-id="{{ item.id }}"
+                 data-delivery-id="{{ item.delivery_id }}"
+                 data-sender-id="{{ item.sender_id }}"
+                 data-provider-id="{{ item.provider_id }}"
+                 data-amount="{{ item.amount }}"
+                 data-status="{{ item.status }}"
+                 data-tx-hash="{{ item.bc_escrow_tx_hash }}"
+                 data-frozen="{{ item.emergency_frozen|yesno:'true,false' }}"
+                 data-created-at="{{ item.created_at }}"
+                 class="grid grid-cols-5 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
+                
+                <div class="col-span-1 font-bold text-gray-800">{{ item.id }}</div>
+                <div class="col-span-1 font-medium text-gray-800">#{{ item.delivery_id }}</div>
+                <div class="col-span-1 font-bold text-gray-900">{{ item.amount }}</div>
+                
+                <div class="col-span-1">
+                    {% if item.status == 'On Hold' %}
+                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">On Hold</span>
+                    {% elif item.status == 'Frozen' %}
+                        <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>
+                    {% elif item.status == 'Released' %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Released</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                    <button type="button" onclick="requestAction('refund', '{{ item.id }}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs px-4 py-2 rounded-lg transition border border-red-100">
+                        Refund
+                    </button>
+                    <button type="button" onclick="requestAction('freeze', '{{ item.id }}', {{ item.emergency_frozen|yesno:'true,false' }})" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition">
+                        {% if item.emergency_frozen %}Unfreeze{% else %}Freeze{% endif %}
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-sm">No active escrow records found.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+
+        <!-- Transaction History Table Header -->
+        <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Transaction ID</div>
+            <div class="col-span-1">Delivery ID</div>
+            <div class="col-span-1">Total Amount</div>
+            <div class="col-span-1">Method</div>
+            <div class="col-span-1">Status</div>
+            <div class="col-span-1 text-right pr-2">Processed At</div>
+        </div>
+
+        <!-- Transaction History Table Body -->
+        <div class="flex flex-col space-y-1">
+            {% for item in transactions %}
+            <div onclick="openTransactionModalFromElement(this)"
+                 data-id="{{ item.id }}"
+                 data-escrow-id="{{ item.escrow_id }}"
+                 data-delivery-id="{{ item.delivery_id }}"
+                 data-base-amount="{{ item.base_amount }}"
+                 data-service-fee="{{ item.service_fee }}"
+                 data-penalty-fee="{{ item.penalty_fee }}"
+                 data-total-amount="{{ item.total_amount }}"
+                 data-method="{{ item.method }}"
+                 data-status="{{ item.status }}"
+                 data-processed-at="{{ item.processed_at }}"
+                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
+                
+                <div class="col-span-1 font-bold text-gray-800">{{ item.id }}</div>
+                <div class="col-span-1 font-medium text-gray-800">#{{ item.delivery_id }}</div>
+                <div class="col-span-1 font-bold text-gray-900">{{ item.total_amount }}</div>
+                <div class="col-span-1 text-gray-700 font-medium">{{ item.method }}</div>
+                
+                <div class="col-span-1">
+                    {% if item.status == 'Completed' %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Completed</span>
+                    {% elif item.status == 'Frozen' %}
+                        <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>
+                    {% else %}
+                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">{{ item.status }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-span-1 text-right text-gray-500 font-medium pr-2">{{ item.processed_at }}</div>
+            </div>
+            {% empty %}
+            <div class="text-center py-12">
+                <p class="text-gray-500 text-sm">No transaction records found.</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MAIN OVERLAY DETAILS MODAL                 -->
+<!-- ========================================== -->
+<div id="escrowModal" class="fixed inset-0 z-40 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+    
+    <div id="escrowModalContent" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col">
+        
+        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-white">
+            <div class="flex items-center gap-3">
+                <h2 id="modalHeaderTitle" class="text-2xl font-bold text-gray-900">Escrow Details</h2>
+                <span id="modalHeaderBadge" class="text-sm font-bold text-[#FF751F] bg-orange-50 px-3 py-1 rounded-md border border-orange-100">#EID501</span>
+            </div>
+            <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div id="modalFrozenBanner" class="hidden bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3 text-red-700">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide">Emergency Freeze Active</p>
+                <p class="text-xs font-medium">Payouts for this escrow are currently halted due to a flag or dispute.</p>
+            </div>
+        </div>
+
+        <div class="p-6 flex flex-col md:flex-row gap-6 max-h-[75vh] overflow-y-auto">
+            
+            <div class="flex-1 flex flex-col gap-4">
+                <div class="bg-[#F5F6F8] rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="bg-[#E4E6EB] px-4 py-2.5 border-b border-gray-300 flex justify-between items-center">
+                        <span class="text-gray-800 text-[15px] font-bold">Financial Summary</span>
+                        <span id="modalStatusBadge" class="px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100">On Hold</span>
+                    </div>
+
+                    <div class="p-5 space-y-4">
+                        <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-bold text-gray-400 uppercase">Total Escrow Amount</p>
+                                <p id="modalMainAmount" class="text-2xl font-black text-gray-900 mt-0.5">₱0.00</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs font-bold text-gray-400 uppercase">Linked Delivery</p>
+                                <p id="modalDeliveryId" class="text-base font-bold text-[#FF751F] hover:underline cursor-pointer mt-0.5">#0000</p>
+                            </div>
+                        </div>
+
+                        <div id="ledgerBreakdownContainer" class="bg-white rounded-xl p-4 border border-gray-200 space-y-2.5 text-xs"></div>
+                    </div>
+                </div>
+
+                <div id="blockchainProofCard" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">On-Chain Smart Contract Proof</h3>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 font-mono text-xs text-gray-600 break-all flex items-center justify-between">
+                        <span id="modalTxHash">0x000...000</span>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('modalTxHash').innerText)" class="text-[#FF751F] font-sans font-bold hover:underline text-[11px] shrink-0 ml-2">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full md:w-[320px] flex flex-col gap-4">
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-4">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">Participants</h3>
+                    
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">S</div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Sender ID</p>
+                            <p id="modalSenderId" class="text-sm font-bold text-gray-800">USR-000</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 border-t border-gray-100 pt-3">
+                        <div class="w-10 h-10 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-sm shrink-0">P</div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Provider ID</p>
+                            <p id="modalProviderId" class="text-sm font-bold text-gray-800">PRV-000</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="modalActionPanel" class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 space-y-2">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Admin Overrides</h3>
+                    <button id="btnModalRelease" onclick="triggerEscrowFromModal('release')" class="w-full bg-[#2D9B63] hover:bg-[#258253] text-white font-bold text-xs py-2.5 rounded-lg transition shadow-sm">
+                        Release to Provider
+                    </button>
+                    <button id="btnModalFreeze" onclick="triggerEscrowFromModal('freeze')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 rounded-lg transition">
+                        Toggle Freeze
+                    </button>
+                    <button id="btnModalRefund" onclick="triggerEscrowFromModal('refund')" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs py-2.5 rounded-lg transition border border-red-100">
+                        Refund Sender
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center shrink-0">
+            <p id="modalTimestamp" class="text-xs text-gray-400 font-medium">Logged: —</p>
+            <button onclick="closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-6 py-2.5 rounded-lg transition">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- CUSTOM ACTION CONFIRMATION MODAL           -->
+<!-- ========================================== -->
+<div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeConfirmModal()"></div>
+    
+    <div id="confirmModalContent" class="relative bg-white rounded-3xl p-6 shadow-2xl w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
+        
+        <!-- Status Icon Container -->
+        <div id="confirmIconContainer" class="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors">
+            <svg id="confirmIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path id="confirmIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <h3 id="confirmTitle" class="text-xl font-extrabold text-gray-900 mb-2">Confirm Action</h3>
+        <p id="confirmMessage" class="text-sm text-gray-500 font-medium mb-6 px-2">Are you sure you want to proceed with this request?</p>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-center gap-3 w-full">
+            <button type="button" onclick="closeConfirmModal()" class="flex-1 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors">
+                Cancel
+            </button>
+            <button type="button" id="confirmSubmitBtn" onclick="submitConfirmedAction()" class="flex-1 py-2.5 text-sm font-bold text-white rounded-xl transition shadow-sm">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSelectedId = null;
+    let pendingActionData = null;
+
+    function openEscrowModalFromElement(element) {
+        const d = element.dataset;
+        currentSelectedId = d.id;
+
+        document.getElementById('modalHeaderTitle').innerText = 'Escrow Record Details';
+        document.getElementById('modalHeaderBadge').innerText = d.id;
+        document.getElementById('modalMainAmount').innerText = d.amount;
+        document.getElementById('modalDeliveryId').innerText = '#' + d.deliveryId;
+        document.getElementById('modalSenderId').innerText = d.senderId;
+        document.getElementById('modalProviderId').innerText = d.providerId;
+        document.getElementById('modalTimestamp').innerText = 'Created At: ' + d.createdAt;
+
+        const txEl = document.getElementById('modalTxHash');
+        txEl.innerText = d.txHash && d.txHash !== '' ? d.txHash : 'No on-chain transaction hash recorded.';
+        document.getElementById('blockchainProofCard').classList.remove('hidden');
+
+        const isFrozen = d.frozen === 'true';
+        document.getElementById('modalFrozenBanner').classList.toggle('hidden', !isFrozen);
+
+        const badge = document.getElementById('modalStatusBadge');
+        badge.innerText = d.status;
+        if (d.status === 'Released') {
+            badge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
+        } else if (d.status === 'Frozen') {
+            badge.className = "px-3 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold text-xs border border-red-200";
+        } else {
+            badge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
+        }
+
+        document.getElementById('ledgerBreakdownContainer').innerHTML = `
+            <div class="flex justify-between py-1 border-b border-gray-100">
+                <span class="text-gray-500">Escrow Hold Status</span>
+                <span class="font-bold text-gray-800">${d.status}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-100">
+                <span class="text-gray-500">Emergency Frozen State</span>
+                <span class="font-bold ${isFrozen ? 'text-red-600' : 'text-gray-800'}">${isFrozen ? 'Yes (Halted)' : 'No'}</span>
+            </div>
+            <div class="flex justify-between py-1">
+                <span class="text-gray-500">Contract Guarantee</span>
+                <span class="font-semibold text-green-600">100% Protected</span>
+            </div>
+        `;
+
+        document.getElementById('modalActionPanel').classList.remove('hidden');
+        showModal();
+    }
+
+    function openTransactionModalFromElement(element) {
+        const d = element.dataset;
+        currentSelectedId = d.id;
+
+        document.getElementById('modalHeaderTitle').innerText = 'Transaction History Record';
+        document.getElementById('modalHeaderBadge').innerText = d.id;
+        document.getElementById('modalMainAmount').innerText = d.totalAmount;
+        document.getElementById('modalDeliveryId').innerText = '#' + d.deliveryId;
+        document.getElementById('modalSenderId').innerText = 'Escrow ID: ' + d.escrowId;
+        document.getElementById('modalProviderId').innerText = 'Method: ' + d.method;
+        document.getElementById('modalTimestamp').innerText = 'Processed At: ' + d.processedAt;
+
+        document.getElementById('modalFrozenBanner').classList.add('hidden');
+        document.getElementById('blockchainProofCard').classList.add('hidden');
+
+        const badge = document.getElementById('modalStatusBadge');
+        badge.innerText = d.status;
+        if (d.status === 'Completed') {
+            badge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
+        } else {
+            badge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
+        }
+
+        document.getElementById('ledgerBreakdownContainer').innerHTML = `
+            <div class="flex justify-between py-1 border-b border-gray-100">
+                <span class="text-gray-500">Base Freight Charge</span>
+                <span class="font-semibold text-gray-800">${d.baseAmount}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-100">
+                <span class="text-gray-500">Platform Service Fee</span>
+                <span class="font-semibold text-gray-800">${d.serviceFee}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-gray-100">
+                <span class="text-gray-500">Penalty Fee</span>
+                <span class="font-semibold text-red-600">${d.penaltyFee}</span>
+            </div>
+            <div class="flex justify-between py-1 font-bold text-sm text-gray-900">
+                <span>Total Settled Amount</span>
+                <span>${d.totalAmount}</span>
+            </div>
+        `;
+
+        document.getElementById('modalActionPanel').classList.add('hidden');
+        showModal();
+    }
+
+    function showModal() {
+        const modal = document.getElementById('escrowModal');
+        const content = document.getElementById('escrowModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('escrowModal');
+        const content = document.getElementById('escrowModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
+    }
+
+    /* CUSTOM CONFIRMATION MODAL LOGIC */
+    function requestAction(action, id, isFrozen = false) {
+        pendingActionData = { action, id };
+        
+        const titleEl = document.getElementById('confirmTitle');
+        const msgEl = document.getElementById('confirmMessage');
+        const btnEl = document.getElementById('confirmSubmitBtn');
+        const iconContainer = document.getElementById('confirmIconContainer');
+        const iconPath = document.getElementById('confirmIconPath');
+
+        if (action === 'release') {
+            titleEl.innerText = 'Release Escrow Payout';
+            msgEl.innerText = `Are you sure you want to release the escrow payout for ${id}?`;
+            btnEl.innerText = 'Yes, Release';
+            btnEl.className = 'flex-1 py-2.5 text-sm font-bold text-white rounded-xl bg-[#2D9B63] hover:bg-[#258253] transition shadow-sm';
+            iconContainer.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-green-100 text-green-600';
+            iconPath.setAttribute('d', 'M5 13l4 4L19 7');
+        } else if (action === 'refund') {
+            titleEl.innerText = 'Refund Escrow Payout';
+            msgEl.innerText = `Are you sure you want to issue a full refund for ${id}?`;
+            btnEl.innerText = 'Yes, Refund';
+            btnEl.className = 'flex-1 py-2.5 text-sm font-bold text-white rounded-xl bg-red-600 hover:bg-red-700 transition shadow-sm';
+            iconContainer.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-red-100 text-red-600';
+            iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12');
+        } else if (action === 'freeze') {
+            const label = isFrozen ? 'Unfreeze' : 'Freeze';
+            titleEl.innerText = `${label} Escrow Account`;
+            msgEl.innerText = `Are you sure you want to ${label.toLowerCase()} transaction ${id}?`;
+            btnEl.innerText = `Yes, ${label}`;
+            btnEl.className = 'flex-1 py-2.5 text-sm font-bold text-white rounded-xl bg-gray-800 hover:bg-gray-900 transition shadow-sm';
+            iconContainer.className = 'w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-gray-100 text-gray-700';
+            iconPath.setAttribute('d', 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z');
+        }
+
+        const modal = document.getElementById('confirmModal');
+        const content = document.getElementById('confirmModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function triggerEscrowFromModal(action) {
+        if (currentSelectedId) {
+            requestAction(action, currentSelectedId);
+        }
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        const content = document.getElementById('confirmModalContent');
+        content.classList.remove('scale-100', 'opacity-100');
+        content.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    }
+
+    function submitConfirmedAction() {
+        if (!pendingActionData) return;
+        
+        // Execute AJAX/Form submission here
+        console.log(`Executing ${pendingActionData.action} on ${pendingActionData.id}`);
+        
+        closeConfirmModal();
+        closeModal();
+    }
+</script>
+{% endblock %}
