@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Support Chat - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<!--
+    ============================================================
+    UI-ONLY SCREEN — no backend wired up yet, on purpose.
+
+    This is a general "Contact Support" chat, separate from the
+    per-delivery Sender<->Provider<->Admin chat already built for
+    the admin panel (which maps to CHAT_ROOMS keyed by delivery_id).
+    A support conversation isn't always about one specific delivery
+    (e.g. "the app won't let me log in"), so it needs its own thread
+    per user rather than reusing that table as-is.
+
+    Both the Sender app and the Provider app can point at this same
+    template — the UI is identical either way, only the person and
+    their message history differ, which is a backend/auth concern.
+    The "Preview as" toggle below exists ONLY so you can see both
+    versions before real login/session data exists — delete that
+    toggle once a real user is available in the request context.
+
+    All data below (supportThreads, quickTopicsByRole, canned
+    replies) is mock/static. When the backend is ready, swap:
+      - the initial supportThreads seed  -> a GET call to fetch this
+        user's existing support thread
+      - sendMessage()'s local push       -> a POST call that creates
+        the message, same pattern as the admin Messages page and the
+        delivery Chat Modal (fetch + CSRF token + reload thread)
+    ============================================================
+-->
+<div class="min-h-[85vh] flex items-center justify-center py-6 px-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-[80vh]">
+
+        <!-- Header -->
+        <div class="bg-[#FF751F] px-5 py-4 flex items-center gap-3 text-white shrink-0">
+            <a href="javascript:history.back()" class="text-white/90 hover:text-white transition-colors shrink-0" title="Back">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </a>
+            <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm shrink-0">PS</div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-[15px] truncate">Pack-N-Ship Support</p>
+                <p class="text-[11px] text-white/80 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-300"></span>
+                    Usually replies in a few minutes
+                </p>
+            </div>
+        </div>
+
+        <!-- DEV-ONLY role preview toggle — remove once real session/auth exists -->
+        <div class="bg-gray-50 border-b border-gray-100 px-4 py-2 flex items-center justify-center gap-2 shrink-0">
+            <span class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Preview as</span>
+            <button id="roleBtn-sender" onclick="setRole('sender')" class="px-3 py-1 rounded-full text-xs font-bold transition-colors">Sender</button>
+            <button id="roleBtn-provider" onclick="setRole('provider')" class="px-3 py-1 rounded-full text-xs font-bold transition-colors">Provider</button>
+        </div>
+
+        <!-- Messages -->
+        <div id="chatMessages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[#FAFAFA]"></div>
+
+        <!-- Quick topic chips -->
+        <div id="quickTopics" class="px-4 pb-3 flex flex-wrap gap-2 shrink-0"></div>
+
+        <!-- Composer -->
+        <div class="px-3 py-3 border-t border-gray-100 flex items-center gap-2 shrink-0">
+            <input id="chatInput" type="text" placeholder="Type your message..."
+                onkeydown="if(event.key==='Enter'){sendMessage();}"
+                class="flex-1 bg-gray-100 border-none rounded-full px-4 py-2.5 text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            <button onclick="sendMessage()" class="bg-[#FF751F] hover:bg-[#e6691c] text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================================
+    // MOCK DATA — replace with real fetch() calls once the backend
+    // support-chat endpoints exist. Structure mirrors what the admin
+    // Messages page / delivery Chat Modal already expect, so wiring
+    // this up later should be a drop-in swap, not a rewrite.
+    // ==========================================================
+    let currentRole = 'sender';
+
+    const supportThreads = {
+        sender: [
+            { from: 'support', text: "Hi! Thanks for reaching out to Pack-N-Ship Support. How can we help with your delivery today?", time: '10:02 AM' },
+            { from: 'me', text: "Hi, my package pickup is delayed and I haven't heard from the provider.", time: '10:05 AM' },
+            { from: 'support', text: "Sorry about that! Let me check your delivery status and get back to you shortly.", time: '10:06 AM' }
+        ],
+        provider: [
+            { from: 'support', text: "Hello! This is Pack-N-Ship Support. What issue are you experiencing?", time: '9:40 AM' },
+            { from: 'me', text: "My escrow payment for a completed delivery hasn't been released yet.", time: '9:42 AM' },
+            { from: 'support', text: "Thanks for flagging this — we're reviewing the QR verification logs now.", time: '9:44 AM' }
+        ]
+    };
+
+    const quickTopicsByRole = {
+        sender: ['Payment issue', 'Delivery delayed', 'Report a provider', 'Account help', 'Other'],
+        provider: ['Escrow not released', 'App issue', 'Report a sender', 'Vehicle documents', 'Other']
+    };
+
+    const cannedReplies = [
+        "Got it — a support agent will follow up here shortly.",
+        "Thanks for the details. We're looking into this now.",
+        "We've logged this and escalated it to the right team.",
+        "Understood. Can you confirm the delivery ID related to this, if any?"
+    ];
+
+    let typingTimeout = null;
+
+    function nowLabel() {
+        return new Date().toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function setRole(role) {
+        currentRole = role;
+        updateRoleButtons();
+        renderMessages();
+        renderQuickTopics();
+    }
+
+    function updateRoleButtons() {
+        ['sender', 'provider'].forEach(r => {
+            const btn = document.getElementById(`roleBtn-${r}`);
+            btn.className = r === currentRole
+                ? "px-3 py-1 rounded-full text-xs font-bold transition-colors bg-[#FF751F] text-white"
+                : "px-3 py-1 rounded-full text-xs font-bold transition-colors bg-gray-200 text-gray-600 hover:bg-gray-300";
+        });
+    }
+
+    function bubbleClasses(isOwn) {
+        return isOwn
+            ? 'bg-[#FF751F] text-white rounded-2xl rounded-br-md self-end'
+            : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md self-start';
+    }
+
+    function renderMessages() {
+        const wrap = document.getElementById('chatMessages');
+        wrap.innerHTML = '';
+
+        supportThreads[currentRole].forEach(m => {
+            const isOwn = m.from === 'me';
+            const row = document.createElement('div');
+            row.className = 'flex flex-col ' + (isOwn ? 'items-end' : 'items-start');
+
+            const label = document.createElement('span');
+            label.className = 'text-[10px] font-semibold text-gray-400 mb-1 px-1';
+            label.innerText = `${isOwn ? 'You' : 'Pack-N-Ship Support'} · ${m.time}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'max-w-[80%] px-4 py-2.5 text-sm ' + bubbleClasses(isOwn);
+            bubble.innerText = m.text;
+
+            row.appendChild(label);
+            row.appendChild(bubble);
+            wrap.appendChild(row);
+        });
+
+        wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function renderQuickTopics() {
+        const wrap = document.getElementById('quickTopics');
+        wrap.innerHTML = '';
+
+        quickTopicsByRole[currentRole].forEach(topic => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'bg-orange-50 hover:bg-orange-100 text-[#D47A4A] text-xs font-semibold px-3 py-1.5 rounded-full border border-orange-100 transition-colors';
+            chip.innerText = topic;
+            chip.onclick = () => useQuickTopic(topic);
+            wrap.appendChild(chip);
+        });
+    }
+
+    function appendMessage(from, text) {
+        supportThreads[currentRole].push({ from, text, time: nowLabel() });
+        renderMessages();
+    }
+
+    function showTypingIndicator() {
+        const wrap = document.getElementById('chatMessages');
+        const row = document.createElement('div');
+        row.id = 'typingIndicatorRow';
+        row.className = 'flex flex-col items-start';
+        row.innerHTML = `
+            <span class="text-[10px] font-semibold text-gray-400 mb-1 px-1">Pack-N-Ship Support</span>
+            <div class="px-4 py-2.5 text-sm bg-white border border-gray-200 text-gray-400 rounded-2xl rounded-bl-md self-start italic">typing…</div>
+        `;
+        wrap.appendChild(row);
+        wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+        const row = document.getElementById('typingIndicatorRow');
+        if (row) row.remove();
+    }
+
+    function simulateSupportReply() {
+        showTypingIndicator();
+        typingTimeout = setTimeout(() => {
+            hideTypingIndicator();
+            const reply = cannedReplies[Math.floor(Math.random() * cannedReplies.length)];
+            appendMessage('support', reply);
+        }, 1100);
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        appendMessage('me', text);
+        simulateSupportReply();
+    }
+
+    function useQuickTopic(topic) {
+        appendMessage('me', topic);
+        simulateSupportReply();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateRoleButtons();
+        renderMessages();
+        renderQuickTopics();
+    });
+</script>
+{% endblock %}

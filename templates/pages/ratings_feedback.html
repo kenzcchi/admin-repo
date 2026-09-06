@@ -14,14 +14,25 @@
     <!-- Main Container Card -->
     <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
-        <!-- Tab Navigation -->
-        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
-            <a href="?tab=overview" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'overview' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                Ratings Overview
-            </a>
-            <a href="?tab=disputes" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'disputes' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                Manage Disputes
-            </a>
+        <!-- Tab Navigation & Search Bar Header Row -->
+        <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
+            <!-- Tab Navigation -->
+            <div class="flex space-x-8">
+                <a href="?tab=overview" class="pb-2 text-sm font-semibold transition-colors {% if current_tab == 'overview' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Ratings Overview
+                </a>
+                <a href="?tab=disputes" class="pb-2 text-sm font-semibold transition-colors {% if current_tab == 'disputes' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Manage Disputes
+                </a>
+            </div>
+
+            <!-- Search Bar placed directly inside the main container -->
+            <div class="relative w-full md:w-72">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
+                </div>
+                <input id="feedbackSearchInput" type="text" oninput="filterFeedbackRecords(this.value)" placeholder="Search reviews & disputes..." class="block w-full pl-11 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            </div>
         </div>
 
         {% if current_tab == 'disputes' %}
@@ -38,9 +49,10 @@
             <div class="col-span-1 text-right pr-2">Actions</div>
         </div>
 
-        <div class="flex flex-col space-y-1">
+        <div id="feedbackTableBody" class="flex flex-col space-y-1">
             {% for item in disputes_list %}
             <div onclick="openReviewModalFromElement(this)"
+                 data-search="#rev-{{ item.review_id }} #del-{{ item.delivery_id }} {{ item.rating }} usr-{{ item.reviewee_id }} {{ item.review_text|default:'' }}"
                  data-review-id="{{ item.review_id }}"
                  data-delivery-id="{{ item.delivery_id }}"
                  data-reviewer-id="{{ item.reviewer_id }}"
@@ -50,7 +62,7 @@
                  data-tx-hash="{{ item.bc_rating_tx_hash }}"
                  data-status="Flagged"
                  data-created-at="{{ item.created_at }}"
-                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
+                 class="feedback-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
                 
                 <div class="col-span-1 font-bold text-gray-800">#REV-{{ item.review_id }}</div>
                 <div class="col-span-1 font-medium text-gray-800">#DEL-{{ item.delivery_id }}</div>
@@ -79,7 +91,7 @@
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-16">
+            <div id="noRecordsDiv" class="text-center py-16">
                 <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 </div>
@@ -102,9 +114,10 @@
             <div class="col-span-1 text-right pr-2">Actions</div>
         </div>
 
-        <div class="flex flex-col space-y-1">
+        <div id="feedbackTableBody" class="flex flex-col space-y-1">
             {% for item in reviews_list %}
             <div onclick="openReviewModalFromElement(this)"
+                 data-search="#rev-{{ item.review_id }} #del-{{ item.delivery_id }} {{ item.rating }} usr-{{ item.reviewee_id }} {{ item.review_text|default:'' }} {{ item.status|default:'' }}"
                  data-review-id="{{ item.review_id }}"
                  data-delivery-id="{{ item.delivery_id }}"
                  data-reviewer-id="{{ item.reviewer_id }}"
@@ -114,7 +127,7 @@
                  data-tx-hash="{{ item.bc_rating_tx_hash }}"
                  data-status="{{ item.status|default:'Active' }}"
                  data-created-at="{{ item.created_at }}"
-                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
+                 class="feedback-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
                 
                 <!-- Rating Stars -->
                 <div class="col-span-1 flex flex-col">
@@ -158,12 +171,17 @@
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-16">
+            <div id="noRecordsDiv" class="text-center py-16">
                 <p class="text-gray-500 text-sm">No reviews or feedback records found.</p>
             </div>
             {% endfor %}
         </div>
         {% endif %}
+
+        <!-- Dynamic No Search Results State (Hidden by default) -->
+        <div id="searchNoResults" class="text-center py-12 hidden">
+            <p class="text-gray-500 text-sm">No records match your search criteria.</p>
+        </div>
 
     </div>
 </div>
@@ -296,6 +314,29 @@
 <script>
     let activeModalReviewId = null;
     let pendingReviewActionData = null;
+
+    // Client-side search filtering logic matching other dashboard modules
+    function filterFeedbackRecords(query) {
+        const q = query.trim().toLowerCase();
+        const rows = document.querySelectorAll('.feedback-row');
+        const noResultsDiv = document.getElementById('searchNoResults');
+        const defaultEmptyDiv = document.getElementById('noRecordsDiv');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
+            const matches = searchBlob.includes(q);
+            row.classList.toggle('hidden', !matches);
+            if (matches) visibleCount++;
+        });
+
+        if (noResultsDiv) {
+            noResultsDiv.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+        }
+        if (defaultEmptyDiv) {
+            defaultEmptyDiv.classList.toggle('hidden', rows.length > 0);
+        }
+    }
 
     function openReviewModalFromElement(element) {
         const d = element.dataset;

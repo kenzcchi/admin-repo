@@ -9,29 +9,71 @@
     <!-- Header Section -->
     <div class="flex justify-between items-center mb-6 px-2">
         <h1 class="text-[28px] font-bold text-gray-800">User Management</h1>
-        
-        <div class="relative w-72">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
-            </div>
-            <input type="text" placeholder="Search user records" class="block w-full pl-11 pr-4 py-2.5 bg-gray-200 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
-        </div>
     </div>
 
     <!-- Main Table Container -->
     <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
-        <!-- Tab Navigation -->
-        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
-            <a href="?tab=all" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'all' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                All Providers
-            </a>
-            <a href="?tab=verified" class="pb-4 text-sm font-semibold transition-colors {% if current_tab == 'verified' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
-                Verified Providers
-            </a>
+        <!-- Tab Navigation & Search Bar Header Row inside the container -->
+        <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
+            <!-- Tab Navigation Links -->
+            <div class="flex space-x-8">
+                <a href="?tab=all" class="pb-2 text-sm font-semibold transition-colors {% if current_tab == 'all' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    All Providers
+                </a>
+                <a href="?tab=verified" class="pb-2 text-sm font-semibold transition-colors {% if current_tab == 'verified' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    Verified Providers
+                </a>
+                <a href="?tab=senders" class="pb-2 text-sm font-semibold transition-colors {% if current_tab == 'senders' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                    All Senders
+                </a>
+            </div>
+
+            <!-- Search Bar placed directly inside the main container -->
+            <div class="relative w-full md:w-72">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
+                </div>
+                <input id="userSearchInput" type="text" oninput="filterUserRecords(this.value)" placeholder="Search user records" class="block w-full pl-11 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            </div>
         </div>
 
-        <!-- Table Header -->
+        {% if current_tab == 'senders' %}
+        <!-- Table Header for Senders (Distinct Layout) -->
+        <div class="grid grid-cols-5 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+            <div class="col-span-1">Sender ID</div>
+            <div class="col-span-2">Sender Name</div>
+            <div class="col-span-1">Contact Email</div>
+            <div class="col-span-1 text-center">Account Status</div>
+        </div>
+
+        <!-- Table Body for Senders -->
+        <div id="userTableBody" class="flex flex-col space-y-1">
+            {% for user in users %}
+            <div id="user-row-{{ user.id }}" 
+                 data-search="{{ user.id }} {{ user.name }} {{ user.email }} {{ user.role }}"
+                 onclick="openUserModal('{{ user.id }}', '{{ user.name }}', '{{ user.email }}', '{{ user.phone }}', 'Sender', '{{ user.status1 }}', '{{ user.addr_primary }}', '{{ user.addr_other }}', '{{ user.status2 }}')" 
+                 class="user-row grid grid-cols-5 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+                
+                <div class="col-span-1 text-sm font-bold text-gray-800">{{ user.id }}</div>
+                <div class="col-span-2 text-sm font-semibold text-gray-900">{{ user.name }}</div>
+                <div class="col-span-1 text-sm text-gray-600">{{ user.email }}</div>
+                
+                <!-- Senders Status Badge Style -->
+                <div class="col-span-1 flex items-center justify-center">
+                    <span class="px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">Sender Active</span>
+                </div>
+            </div>
+            {% empty %}
+            <div id="noRecordsDiv" class="text-center py-12">
+                <p class="text-gray-500 text-sm">No sender records found.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+
+        <!-- Table Header for Providers -->
         <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
             <div class="col-span-1">ID</div>
             <div class="col-span-2">Name</div>
@@ -40,11 +82,13 @@
             <div class="col-span-1 text-center">Status</div>
         </div>
 
-        <!-- Table Body -->
-        <div class="flex flex-col space-y-1">
+        <!-- Table Body for Providers -->
+        <div id="userTableBody" class="flex flex-col space-y-1">
             {% for user in users %}
-            <div id="user-row-{{ user.id }}" onclick="openUserModal('{{ user.id }}', '{{ user.name }}', '{{ user.email }}', '{{ user.phone }}', '{{ user.role }}', '{{ user.status1 }}', '{{ user.addr_primary }}', '{{ user.addr_other }}', '{{ user.status2 }}')" 
-                 class="grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+            <div id="user-row-{{ user.id }}" 
+                 data-search="{{ user.id }} {{ user.name }} {{ user.email }} {{ user.role }}"
+                 onclick="openUserModal('{{ user.id }}', '{{ user.name }}', '{{ user.email }}', '{{ user.phone }}', '{{ user.role }}', '{{ user.status1 }}', '{{ user.addr_primary }}', '{{ user.addr_other }}', '{{ user.status2 }}')" 
+                 class="user-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
                 
                 <div class="col-span-1 text-sm font-medium text-gray-800">{{ user.id }}</div>
                 <div class="col-span-2 text-sm font-medium text-gray-800">{{ user.name }}</div>
@@ -55,8 +99,10 @@
                 <div class="col-span-1 flex items-center justify-center gap-4">
                     {% if user.status1 == 'Pending' %}
                         <span class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
-                    {% elif user.status1 == 'Verified' %}
-                        <span class="px-4 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span>
+                    {% elif user.status1 == 'Verified' or user.status1 == 'Active' %}
+                        <span class="px-4 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">{{ user.status1 }}</span>
+                    {% else %}
+                        <span class="px-4 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">{{ user.status1|default:"Active" }}</span>
                     {% endif %}
                     
                     {% if user.status2 == 'Active' %}
@@ -67,10 +113,16 @@
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-12">
+            <div id="noRecordsDiv" class="text-center py-12">
                 <p class="text-gray-500 text-sm">No records found in this category.</p>
             </div>
             {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Dynamic No Search Results State (Hidden by default) -->
+        <div id="searchNoResults" class="text-center py-12 hidden">
+            <p class="text-gray-500 text-sm">No user records match your search criteria.</p>
         </div>
     </div>
 </div>
@@ -143,11 +195,10 @@
         <!-- Footer With Dynamic Actions -->
         <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <span class="text-[15px] text-gray-800">Provider ID:</span>
+                <span class="text-[15px] text-gray-800">User ID:</span>
                 <span id="modalId" class="text-[15px] font-normal text-gray-800">US1</span>
             </div>
             
-            <!-- Footer Action Container: Review Docs and Toggle are both available here -->
             <div id="modalActionContainer" class="flex items-center gap-4">
                 <!-- Injected via JavaScript -->
             </div>
@@ -159,6 +210,25 @@
 <script>
     const modal = document.getElementById('userModal');
     const modalContent = document.getElementById('modalContent');
+
+    // Client-side search filtering logic inside the container
+    function filterUserRecords(query) {
+        const q = query.trim().toLowerCase();
+        const rows = document.querySelectorAll('.user-row');
+        const noResultsDiv = document.getElementById('searchNoResults');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
+            const matches = searchBlob.includes(q);
+            row.classList.toggle('hidden', !matches);
+            if (matches) visibleCount++;
+        });
+
+        if (noResultsDiv) {
+            noResultsDiv.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+        }
+    }
 
     function openUserModal(id, name, email, phone, role, status1, addrPrimary, addrOther, status2) {
         document.getElementById('modalId').innerText = id;
@@ -174,15 +244,13 @@
         
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = status1;
-        if (status1 === 'Verified') {
+        if (status1 === 'Verified' || status1 === 'Active') {
             badge.className = "px-4 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-sm border border-green-200";
         } else {
             badge.className = "px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100";
         }
 
-        // Action Container: Both Verified and Pending now show "Review Docs" alongside the status toggle control
         const actionContainer = document.getElementById('modalActionContainer');
-        
         const isActive = (status2 === 'Active');
         const stateStr = isActive ? 'true' : 'false';
         const toggleBgClass = isActive ? 'bg-gray-800 justify-end' : 'bg-gray-300 justify-start';
@@ -190,10 +258,6 @@
         const toggleText = isActive ? 'Deactivate' : 'Activate';
 
         actionContainer.innerHTML = `
-            <a href="{% url 'provider_verification' %}" class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-50 text-[#FF751F] hover:bg-orange-100 transition-colors font-bold border border-orange-100 text-xs">
-                Review Docs
-            </a>
-
             <button id="modalToggleBtn" data-state="${stateStr}" onclick="openToggleConfirm(this, '${id}', '${name}')" 
                     class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
                 <div class="toggle-bg w-9 h-5 ${toggleBgClass} rounded-full flex items-center px-0.5 transition-all shadow-inner">
@@ -252,12 +316,12 @@
         const confirmBtn = document.getElementById('toggleConfirmBtn');
 
         if (pendingToggleStateIsActive) {
-            title.innerText = "Deactivate Provider";
+            title.innerText = "Deactivate User";
             text.innerHTML = `Are you sure you want to deactivate <b>${userName}</b> (${userId})?`;
             confirmBtn.className = "px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md hover:-translate-y-0.5 transform bg-red-500 hover:bg-red-600 shadow-red-500/30";
             confirmBtn.innerText = "Yes, Deactivate";
         } else {
-            title.innerText = "Activate Provider";
+            title.innerText = "Activate User";
             text.innerHTML = `Are you sure you want to activate <b>${userName}</b> (${userId})?`;
             confirmBtn.className = "px-5 py-2.5 rounded-xl font-medium text-white transition-all shadow-md hover:-translate-y-0.5 transform bg-[#51D273] hover:bg-[#43bd62] shadow-green-500/30";
             confirmBtn.innerText = "Yes, Activate";

@@ -14,14 +14,25 @@
     <!-- Main Container Card -->
     <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] min-h-[600px]">
         
-        <!-- Streamlined Tab Navigation (Pending & Rejected Only) -->
-        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-4">
-            <button onclick="switchTab('pending')" id="tabBtn-pending" class="pb-4 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]">
-                Pending Verification
-            </button>
-            <button onclick="switchTab('rejected')" id="tabBtn-rejected" class="pb-4 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800">
-                Rejected Archive
-            </button>
+        <!-- Streamlined Tab Navigation & Search Bar Header Row inside the container -->
+        <div class="flex flex-col md:flex-row justify-between items-center border-b border-gray-100 mb-6 px-4 pb-4 gap-4">
+            <!-- Streamlined Tab Navigation (Pending & Rejected Only) -->
+            <div class="flex space-x-8">
+                <button onclick="switchTab('pending')" id="tabBtn-pending" class="pb-2 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]">
+                    Pending Verification
+                </button>
+                <button onclick="switchTab('rejected')" id="tabBtn-rejected" class="pb-2 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800">
+                    Rejected Archive
+                </button>
+            </div>
+
+            <!-- Search Bar placed directly inside the main container matching users.html layout -->
+            <div class="relative w-full md:w-72">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
+                </div>
+                <input id="providerSearchInput" type="text" oninput="filterProviderRecords(this.value)" placeholder="Search provider records" class="block w-full pl-11 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:ring-2 focus:ring-[#FF751F] focus:bg-white transition-all outline-none">
+            </div>
         </div>
 
         <!-- Table Header -->
@@ -36,6 +47,11 @@
         <!-- Table Body (Mock Data Container) -->
         <div id="providerTableBody" class="flex flex-col space-y-1">
             <!-- Dynamically populated by JavaScript below -->
+        </div>
+
+        <!-- Dynamic No Search Results State (Hidden by default) -->
+        <div id="searchNoResults" class="text-center py-12 hidden">
+            <p class="text-gray-500 text-sm">No provider records match your search criteria.</p>
         </div>
 
     </div>
@@ -204,18 +220,43 @@
         ['pending', 'rejected'].forEach(t => {
             const btn = document.getElementById(`tabBtn-${t}`);
             if (t === tabName) {
-                btn.className = "pb-4 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]";
+                btn.className = "pb-2 text-sm font-semibold transition-colors text-[#FF751F] border-b-2 border-[#FF751F]";
             } else {
-                btn.className = "pb-4 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800";
+                btn.className = "pb-2 text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800";
             }
         });
+
+        // Clear search input when switching tabs
+        const searchInput = document.getElementById('providerSearchInput');
+        if (searchInput) searchInput.value = '';
 
         renderTable(tabName);
     }
 
+    // Client-side search filtering logic matching users.html
+    function filterProviderRecords(query) {
+        const q = query.trim().toLowerCase();
+        const rows = document.querySelectorAll('.provider-row');
+        const noResultsDiv = document.getElementById('searchNoResults');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
+            const matches = searchBlob.includes(q);
+            row.classList.toggle('hidden', !matches);
+            if (matches) visibleCount++;
+        });
+
+        if (noResultsDiv) {
+            noResultsDiv.classList.toggle('hidden', visibleCount > 0 || rows.length === 0);
+        }
+    }
+
     function renderTable(statusFilter) {
         const tableBody = document.getElementById('providerTableBody');
+        const noResultsDiv = document.getElementById('searchNoResults');
         tableBody.innerHTML = '';
+        if (noResultsDiv) noResultsDiv.classList.add('hidden');
 
         const filtered = mockProviders.filter(p => {
             if (statusFilter === 'pending') return p.status === 'Pending';
@@ -251,8 +292,10 @@
                     </button>`;
             }
 
+            const searchBlob = `us${item.id} ${item.name} ${item.plate_no} ${item.vehicle_type}`.toLowerCase();
+
             const rowHTML = `
-                <div onclick="openVerificationModal(${item.id})" class="grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+                <div data-search="${searchBlob}" onclick="openVerificationModal(${item.id})" class="provider-row grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
                     <div class="col-span-1 text-sm font-medium text-gray-800">US${item.id}</div>
                     <div class="col-span-2 text-sm font-medium text-gray-800">
                         ${item.name}
@@ -269,6 +312,12 @@
                 </div>`;
             tableBody.innerHTML += rowHTML;
         });
+
+        // Re-apply filter if text was already typed
+        const searchInput = document.getElementById('providerSearchInput');
+        if (searchInput && searchInput.value) {
+            filterProviderRecords(searchInput.value);
+        }
     }
 
     // Modal UI Controllers
@@ -285,7 +334,6 @@
         document.getElementById('modalExpiryDate').innerText = item.expiry_date;
         document.getElementById('modalVehicleInfo').innerText = `${item.plate_no} (${item.vehicle_type})`;
 
-        // Dynamically extract and set the first letter of the provider's name as avatar initial
         const firstLetter = item.name ? item.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;
 
