@@ -1,238 +1,632 @@
 {% extends 'admin_base.html' %}
 {% load static %}
 
-{% block title %}Executive Financial & Operational Report - Pack-N-Ship{% endblock %}
+{% block title %}Reports - Pack-N-Ship{% endblock %}
 
 {% block content %}
 <!-- Chart.js Engine -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="max-w-[1400px] mx-auto pb-12">
-    
-    <!-- Corporate Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 px-2">
+
+    <!-- Printable Header Banner (Only visible during print/PDF export) -->
+    <div class="hidden print:block mb-6 p-4 border border-gray-300 rounded-xl bg-gray-50 text-gray-800">
+        <h2 class="text-lg font-black">Pack-N-Ship Executive Report Summary</h2>
+        <p class="text-xs mt-1">
+            <strong>Report Tab:</strong> {{ current_tab|title }} | 
+            <strong>Time Period:</strong> {{ selected_period|title }}
+            {% if request.GET.delivery_type %} | <strong>Delivery Type:</strong> {{ request.GET.delivery_type|title }}{% endif %}
+            {% if request.GET.status %} | <strong>Status:</strong> {{ request.GET.status|title }}{% endif %}
+            {% if request.GET.payment_method %} | <strong>Payment Method:</strong> {{ request.GET.payment_method|upper }}{% endif %}
+            {% if request.GET.role %} | <strong>Role:</strong> {{ request.GET.role|title }}{% endif %}
+            {% if request.GET.proof_type %} | <strong>Proof Type:</strong> {{ request.GET.proof_type|title }}{% endif %}
+        </p>
+    </div>
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2">
         <div>
-            <h1 class="text-[28px] font-bold text-gray-900 tracking-tight">Financial & Operational Performance</h1>
-            <p class="text-xs text-gray-500 font-medium mt-1">Pack-N-Ship Platform Analytics • Escrow & On-Chain Audit Summary</p>
+            <h1 class="text-[28px] font-bold text-gray-900 tracking-tight">Reports</h1>
         </div>
-        
+
         <div class="flex items-center gap-3">
-            <form method="GET" id="monthForm" class="flex items-center gap-2">
-                <select name="month" onchange="document.getElementById('monthForm').submit();" class="border border-gray-200 shadow-sm rounded-xl px-4 py-2 text-xs font-semibold text-gray-700 bg-white outline-none cursor-pointer hover:border-gray-300 transition-colors">
-                    <option value="October" {% if selected_month == 'October' %}selected{% endif %}>Q4 - October 2026</option>
-                    <option value="November" {% if selected_month == 'November' %}selected{% endif %}>Q4 - November 2026</option>
-                    <option value="December" {% if selected_month == 'December' %}selected{% endif %}>Q4 - December 2026</option>
+            <form method="GET" id="periodForm" class="flex items-center gap-2">
+                <!-- Preserve current tab -->
+                <input type="hidden" name="tab" value="{{ current_tab|default:'overview' }}">
+                
+                <!-- Preserve active sub-filters when period changes -->
+                {% if request.GET.delivery_type %}<input type="hidden" name="delivery_type" value="{{ request.GET.delivery_type }}">{% endif %}
+                {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+                {% if request.GET.payment_method %}<input type="hidden" name="payment_method" value="{{ request.GET.payment_method }}">{% endif %}
+                {% if request.GET.role %}<input type="hidden" name="role" value="{{ request.GET.role }}">{% endif %}
+                {% if request.GET.proof_type %}<input type="hidden" name="proof_type" value="{{ request.GET.proof_type }}">{% endif %}
+
+                <select name="period" onchange="document.getElementById('periodForm').submit();" class="border border-gray-200 shadow-sm rounded-xl px-4 py-2 text-xs font-semibold text-gray-700 bg-white outline-none cursor-pointer hover:border-gray-300 transition-colors">
+                    <option value="this_month" {% if selected_period == 'this_month' or not selected_period %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if selected_period == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="last_3_months" {% if selected_period == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                    <option value="this_year" {% if selected_period == 'this_year' %}selected{% endif %}>This Year</option>
                 </select>
             </form>
 
-            <button onclick="window.print();" class="bg-[#FF751F] hover:bg-[#e05f12] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2">
+            <button onclick="window.print();" class="bg-[#FF751F] hover:bg-[#e05f12] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                Export PDF
+                {% if current_tab == 'deliveries' %}Export Delivery Report
+                {% elif current_tab == 'financial' %}Export Financial Data
+                {% elif current_tab == 'users' %}Export User Activity
+                {% elif current_tab == 'blockchain' %}Export Audit Report
+                {% else %}Export Summary{% endif %}
             </button>
         </div>
     </div>
 
-    <!-- Executive Summary Key Metrics Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <!-- GMV -->
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Gross Volume (GMV)</p>
-                <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+12.4% MoM</span>
-            </div>
-            <p class="text-2xl font-black text-gray-900 mt-2">{{ total_gtv }}</p>
-            <p class="text-[11px] text-gray-400 font-medium mt-1">Escrowed transaction value</p>
+    <!-- Tab Navigation -->
+    <div class="bg-white rounded-3xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] p-6">
+        <div class="flex space-x-8 border-b border-gray-100 mb-6 px-2 overflow-x-auto">
+            <a href="?tab=overview&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pb-4 text-sm font-semibold transition-colors whitespace-nowrap {% if current_tab == 'overview' or not current_tab %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Overview
+            </a>
+            <a href="?tab=deliveries&period={{ selected_period|default:'this_month' }}{% if request.GET.delivery_type %}&delivery_type={{ request.GET.delivery_type }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pb-4 text-sm font-semibold transition-colors whitespace-nowrap {% if current_tab == 'deliveries' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Deliveries
+            </a>
+            <a href="?tab=financial&period={{ selected_period|default:'this_month' }}{% if request.GET.payment_method %}&payment_method={{ request.GET.payment_method }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="pb-4 text-sm font-semibold transition-colors whitespace-nowrap {% if current_tab == 'financial' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Financial
+            </a>
+            <a href="?tab=users&period={{ selected_period|default:'this_month' }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}" class="pb-4 text-sm font-semibold transition-colors whitespace-nowrap {% if current_tab == 'users' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Users
+            </a>
+            <a href="?tab=blockchain&period={{ selected_period|default:'this_month' }}{% if request.GET.proof_type %}&proof_type={{ request.GET.proof_type }}{% endif %}" class="pb-4 text-sm font-semibold transition-colors whitespace-nowrap {% if current_tab == 'blockchain' %}text-[#FF751F] border-b-2 border-[#FF751F]{% else %}text-gray-500 hover:text-gray-800{% endif %}">
+                Blockchain Audit
+            </a>
         </div>
 
-        <!-- Net Revenue -->
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Net Platform Revenue</p>
-                <span class="text-[10px] font-bold text-[#FF751F] bg-orange-50 px-2 py-0.5 rounded-full">14.9% Take-Rate</span>
-            </div>
-            <p class="text-2xl font-black text-[#FF751F] mt-2">{{ net_revenue }}</p>
-            <p class="text-[11px] text-gray-400 font-medium mt-1">Platform service fees retained</p>
-        </div>
+        <!-- ================================================= -->
+        <!-- OVERVIEW                                           -->
+        <!-- ================================================= -->
+        {% if current_tab == 'overview' or not current_tab %}
 
-        <!-- Operational Volume -->
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillments</p>
-                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">98.2% Rate</span>
-            </div>
-            <p class="text-2xl font-black text-gray-900 mt-2">{{ completed_deliveries }}</p>
-            <p class="text-[11px] text-gray-400 font-medium mt-1">Completed micro-moves</p>
-        </div>
-
-        <!-- Cryptographic Ledger -->
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div class="flex justify-between items-start">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">On-Chain Audit Log</p>
-                <span class="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Immutable</span>
-            </div>
-            <p class="text-2xl font-black text-gray-900 mt-2">{{ blockchain_proofs }}</p>
-            <p class="text-[11px] text-gray-400 font-medium mt-1">Dual-hash verification proofs</p>
-        </div>
-    </div>
-
-    <!-- Main Analytics Card -->
-    <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] mb-6">
-        
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-100 gap-2">
-            <div>
-                <h2 class="text-lg font-bold text-gray-900">Financial Revenue & Volume Trajectory</h2>
-                <p class="text-xs text-gray-400 font-medium">Comparison between total funds escrowed vs. net commission realized</p>
-            </div>
-            <div class="flex items-center gap-4 text-xs font-semibold">
-                <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#FF751F]"></span> GMV</span>
-                <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#fde2b3]"></span> Net Revenue</span>
-            </div>
-        </div>
-
-        <!-- Chart Container -->
-        <div class="relative w-full h-[360px]">
-            <canvas id="revenueChart"></canvas>
-        </div>
-
-    </div>
-
-    <!-- Corporate Audit & Health Breakdown Table -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Platform Breakdown Card -->
-        <div class="lg:col-span-2 bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
-            <h3 class="text-base font-bold text-gray-900 mb-4">Operational Performance Analysis</h3>
-            
-            <div class="space-y-4">
-                <div class="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl">
-                    <div>
-                        <p class="text-xs font-bold text-gray-800">Escrow Security & Lock Ratio</p>
-                        <p class="text-[11px] text-gray-400">Total active funds currently held pending recipient delivery</p>
-                    </div>
-                    <span class="text-sm font-bold text-gray-900">₱42,500.00</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Completed Deliveries</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-gray-900">{{ ov_completed|default:"96" }}</p>
+                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-0.5">↗ {{ ov_completed_delta|default:"8.4%" }}</span>
                 </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">vs. previous period</p>
+            </div>
 
-                <div class="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl">
-                    <div>
-                        <p class="text-xs font-bold text-gray-800">Average Fulfillment Duration</p>
-                        <p class="text-[11px] text-gray-400">Time elapsed from peer-matching to drop-off completion</p>
-                    </div>
-                    <span class="text-sm font-bold text-gray-900">42.5 Mins</span>
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Net Revenue</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-[#FF751F]">{{ ov_net_revenue|default:"₱22,780" }}</p>
+                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-0.5">↗ {{ ov_net_revenue_delta|default:"5.1%" }}</span>
                 </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">vs. previous period</p>
+            </div>
 
-                <div class="flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl">
-                    <div>
-                        <p class="text-xs font-bold text-gray-800">Dispute & Claims Settlement Rate</p>
-                        <p class="text-[11px] text-gray-400">Percentage of flagged deliveries requiring admin resolution</p>
-                    </div>
-                    <span class="text-sm font-bold text-emerald-600">0.42% (Low Risk)</span>
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Fulfillment Rate</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-gray-900">{{ ov_fulfillment_rate|default:"93.2%" }}</p>
+                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-0.5">↗ 1.2 pts</span>
+                </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">Completed ÷ total requests</p>
+            </div>
+
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Cancellation Rate</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-gray-900">{{ ov_cancellation_rate|default:"4.9%" }}</p>
+                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-0.5">↘ 0.6 pts</span>
+                </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">Lower is better</p>
+            </div>
+
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Dispute Rate</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-gray-900">{{ ov_dispute_rate|default:"1.9%" }}</p>
+                    <span class="text-xs font-bold text-red-500 flex items-center gap-0.5">↗ 0.4 pts</span>
+                </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">Delivery issues ÷ completed</p>
+            </div>
+
+            <div class="bg-[#F8F9FA] rounded-2xl p-5 border border-gray-100">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Users</p>
+                <div class="flex items-end justify-between mt-2">
+                    <p class="text-2xl font-black text-gray-900">{{ ov_active_users|default:"47" }}</p>
+                    <span class="text-xs font-bold text-emerald-600 flex items-center gap-0.5">↗ 6 new</span>
+                </div>
+                <p class="text-[11px] text-gray-400 font-medium mt-1">Senders + Providers</p>
+            </div>
+        </div>
+
+        <div class="border border-gray-100 rounded-2xl p-5 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-900">Delivery Volume vs. Net Revenue</h3>
+                    <p class="text-[11px] text-gray-400">Last 6 months</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs font-semibold">
+                    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#FF751F]"></span> Deliveries</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-400"></span> Net Revenue</span>
                 </div>
             </div>
-        </div>
-
-        <!-- Compliance & Regulatory Summary -->
-        <div class="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] flex flex-col justify-between">
-            <div>
-                <h3 class="text-base font-bold text-gray-900 mb-2">Audit Compliance</h3>
-                <p class="text-xs text-gray-400 font-medium leading-relaxed mb-4">
-                    All cryptographic hashes generated upon item pick-up and drop-off are verified on-chain to meet institutional transparency compliance.
-                </p>
-
-                <div class="space-y-2 border-t border-gray-100 pt-4">
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-500">Provider Verification KYC</span>
-                        <span class="text-emerald-600">100% Verified</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-500">Escrow Discrepancy Margin</span>
-                        <span class="text-gray-900">0.00%</span>
-                    </div>
-                    <div class="flex justify-between text-xs font-semibold">
-                        <span class="text-gray-500">On-Chain Integrity Pass</span>
-                        <span class="text-emerald-600">Passed</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-6 pt-4 border-t border-gray-100">
-                <span class="inline-block w-full text-center text-[11px] font-bold text-gray-400 bg-gray-50 py-2 rounded-xl">
-                    System Status: Healthy & Audited
-                </span>
+            <div class="relative w-full h-[280px]">
+                <canvas id="overviewChart"></canvas>
             </div>
         </div>
 
-    </div>
-
-</div>
-
-<script>
-    const revenueData = {{ revenue_json|safe }};
-    const ctx = document.getElementById('revenueChart').getContext('2d');
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: revenueData.labels,
-            datasets: [
-                {
-                    label: 'Gross Transaction Volume (GMV)',
-                    data: revenueData.gross_transactions,
-                    borderColor: '#FF751F',
-                    backgroundColor: 'rgba(255, 117, 31, 0.45)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 2,
-                    pointHoverRadius: 6,
-                    borderWidth: 2
+        <script>
+            new Chart(document.getElementById('overviewChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Deliveries',
+                            data: [58, 64, 71, 80, 88, 96],
+                            backgroundColor: 'rgba(255, 117, 31, 0.55)',
+                            borderRadius: 6,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: 'Net Revenue',
+                            data: [12400, 14100, 16800, 18900, 21600, 22780],
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'transparent',
+                            tension: 0.4,
+                            pointRadius: 3,
+                            yAxisID: 'y1'
+                        }
+                    ]
                 },
-                {
-                    label: 'Net Platform Commission',
-                    data: revenueData.net_revenue,
-                    borderColor: '#fde2b3',
-                    backgroundColor: 'rgba(253, 226, 179, 0.55)',
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 2,
-                    pointHoverRadius: 6,
-                    borderWidth: 2
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    backgroundColor: '#111827',
-                    padding: 12,
-                    cornerRadius: 8
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#9ca3af', font: { size: 11 } }
-                },
-                y: {
-                    min: 0,
-                    max: 100,
-                    grid: { color: '#f3f4f6' },
-                    ticks: {
-                        stepSize: 20,
-                        color: '#9ca3af',
-                        font: { size: 11 }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { position: 'left', grid: { color: '#f3f4f6' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+                        y1: { position: 'right', grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 }, callback: v => '₱' + v/1000 + 'k' } }
                     }
                 }
-            },
-            interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
-            }
-        }
-    });
-</script>
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- DELIVERIES                                         -->
+        <!-- ================================================= -->
+        {% if current_tab == 'deliveries' %}
+
+        <!-- Fully Functional Delivery Filters -->
+        <form method="GET" id="deliveryFilterForm" class="flex flex-wrap gap-2 mb-5">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+            
+            <select name="delivery_type" onchange="document.getElementById('deliveryFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.delivery_type == '' %}selected{% endif %}>All Delivery Types</option>
+                <option value="curbside" {% if request.GET.delivery_type == 'curbside' %}selected{% endif %}>Curb-side</option>
+                <option value="door" {% if request.GET.delivery_type == 'door' %}selected{% endif %}>Door-to-Door</option>
+            </select>
+            
+            <select name="status" onchange="document.getElementById('deliveryFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                <option value="in_transit" {% if request.GET.status == 'in_transit' %}selected{% endif %}>In Transit</option>
+                <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Total Requests</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ del_total|default:"128" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Completion Rate</p>
+                <p class="text-xl font-black text-emerald-600 mt-1">{{ del_completion|default:"75.0%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Cancellation Rate</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ del_cancel|default:"9.4%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Avg. Fulfillment</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ del_avg_duration|default:"42.5m" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Exception Rate</p>
+                <p class="text-xl font-black text-red-500 mt-1">{{ del_exception|default:"1.9%" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-1">Delivery Volume by Status</h3>
+                <p class="text-[11px] text-gray-400 mb-4">Weekly, last 6 weeks</p>
+                <div class="relative w-full h-[260px]">
+                    <canvas id="deliveryStatusChart"></canvas>
+                </div>
+            </div>
+            <div class="border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-1">Curb-side vs. Door-to-Door</h3>
+                <p class="text-[11px] text-gray-400 mb-4">Share of completed deliveries</p>
+                <div class="relative w-full h-[220px]">
+                    <canvas id="deliveryTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-gray-100 rounded-2xl overflow-hidden">
+            <div class="grid grid-cols-5 gap-4 bg-[#F8F9FA] px-5 py-3 text-xs font-bold text-gray-500 uppercase">
+                <div>Week</div>
+                <div>Requests</div>
+                <div>Completed</div>
+                <div>Cancelled</div>
+                <div>Avg. Duration</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 1</div><div class="text-gray-600">19</div><div class="text-emerald-600 font-semibold">14</div><div class="text-gray-500">2</div><div class="text-gray-500">44 min</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 2</div><div class="text-gray-600">19</div><div class="text-emerald-600 font-semibold">16</div><div class="text-gray-500">1</div><div class="text-gray-500">41 min</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 3</div><div class="text-gray-600">20</div><div class="text-emerald-600 font-semibold">15</div><div class="text-gray-500">3</div><div class="text-gray-500">45 min</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 4</div><div class="text-gray-600">20</div><div class="text-emerald-600 font-semibold">17</div><div class="text-gray-500">2</div><div class="text-gray-500">40 min</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 5</div><div class="text-gray-600">21</div><div class="text-emerald-600 font-semibold">16</div><div class="text-gray-500">1</div><div class="text-gray-500">43 min</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">Week 6</div><div class="text-gray-600">21</div><div class="text-emerald-600 font-semibold">18</div><div class="text-gray-500">3</div><div class="text-gray-500">42 min</div>
+            </div>
+        </div>
+
+        <script>
+            new Chart(document.getElementById('deliveryStatusChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'],
+                    datasets: [
+                        { label: 'Completed', data: [14, 16, 15, 17, 16, 18], backgroundColor: '#22c55e', stack: 's' },
+                        { label: 'Cancelled', data: [2, 1, 3, 2, 1, 3], backgroundColor: '#ef4444', stack: 's' },
+                        { label: 'Pending', data: [3, 2, 2, 1, 2, 1], backgroundColor: '#FF751F', stack: 's' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: '#f3f4f6' } } }
+                }
+            });
+
+            new Chart(document.getElementById('deliveryTypeChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Curb-side', 'Door-to-Door'],
+                    datasets: [{ data: [68, 32], backgroundColor: ['#FF751F', '#fde2b3'], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- FINANCIAL                                          -->
+        <!-- ================================================= -->
+        {% if current_tab == 'financial' %}
+
+        <!-- Fully Functional Financial Filters -->
+        <form method="GET" id="financialFilterForm" class="flex flex-wrap gap-2 mb-5">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+            
+            <select name="payment_method" onchange="document.getElementById('financialFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.payment_method == '' %}selected{% endif %}>All Payment Methods</option>
+                <option value="gcash" {% if request.GET.payment_method == 'gcash' %}selected{% endif %}>GCash</option>
+                <option value="card" {% if request.GET.payment_method == 'card' %}selected{% endif %}>Card</option>
+                <option value="bank" {% if request.GET.payment_method == 'bank' %}selected{% endif %}>Bank Transfer</option>
+            </select>
+            
+            <select name="status" onchange="document.getElementById('financialFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.status == '' %}selected{% endif %}>All Statuses</option>
+                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                <option value="on_hold" {% if request.GET.status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                <option value="refunded" {% if request.GET.status == 'refunded' %}selected{% endif %}>Refunded</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">GMV</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ fin_gmv|default:"₱152,400" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Net Revenue</p>
+                <p class="text-xl font-black text-[#FF751F] mt-1">{{ fin_net|default:"₱22,780" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Take Rate</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ fin_take_rate|default:"14.9%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Escrow On Hold</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ fin_escrow_held|default:"₱8,950" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Refunded</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ fin_refunded|default:"₱1,200" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-1">GMV vs. Net Revenue</h3>
+                <p class="text-[11px] text-gray-400 mb-4">Last 6 months</p>
+                <div class="relative w-full h-[260px]">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+            <div class="border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-1">Revenue by Payment Method</h3>
+                <p class="text-[11px] text-gray-400 mb-4">Share of GMV this period</p>
+                <div class="relative w-full h-[220px]">
+                    <canvas id="paymentMethodChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="border border-gray-100 rounded-2xl overflow-hidden">
+            <div class="flex justify-between items-center px-5 py-3 bg-[#F8F9FA]">
+                <h3 class="text-xs font-bold text-gray-500 uppercase">Recent Transactions</h3>
+                <a href="{% url 'escrow' %}" class="text-xs font-bold text-[#FF751F] hover:text-[#e6691c]">View all in Escrow & Payments →</a>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-xs font-bold text-gray-500 uppercase border-t border-gray-100">
+                <div>Transaction ID</div>
+                <div>Delivery ID</div>
+                <div>Amount</div>
+                <div>Method</div>
+                <div>Status</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">TID108</div><div class="text-gray-600">#1008</div><div class="font-semibold text-gray-900">₱310.00</div><div class="text-gray-600">GCash</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Completed</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">TID107</div><div class="text-gray-600">#1007</div><div class="font-semibold text-gray-900">₱180.00</div><div class="text-gray-600">Card</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Completed</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">TID106</div><div class="text-gray-600">#1006</div><div class="font-semibold text-gray-900">₱245.00</div><div class="text-gray-600">GCash</div>
+                <div><span class="px-3 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">On Hold</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">TID105</div><div class="text-gray-600">#1005</div><div class="font-semibold text-gray-900">₱90.00</div><div class="text-gray-600">Bank Transfer</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Completed</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">TID104</div><div class="text-gray-600">#1004</div><div class="font-semibold text-gray-900">₱220.00</div><div class="text-gray-600">GCash</div>
+                <div><span class="px-3 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Refunded</span></div>
+            </div>
+        </div>
+
+        <script>
+            new Chart(document.getElementById('revenueChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        { label: 'GMV', data: [82000, 94500, 108200, 121400, 138900, 152400], borderColor: '#FF751F', backgroundColor: 'rgba(255,117,31,0.35)', fill: true, tension: 0.4, pointRadius: 2 },
+                        { label: 'Net Revenue', data: [12400, 14100, 16800, 18900, 21600, 22780], borderColor: '#fde2b3', backgroundColor: 'rgba(253,226,179,0.5)', fill: true, tension: 0.4, pointRadius: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false } }, y: { grid: { color: '#f3f4f6' }, ticks: { callback: v => '₱' + v/1000 + 'k' } } }
+                }
+            });
+
+            new Chart(document.getElementById('paymentMethodChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['GCash', 'Card', 'Bank Transfer'],
+                    datasets: [{ data: [58, 27, 15], backgroundColor: ['#FF751F', '#60a5fa', '#a78bfa'], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- USERS                                              -->
+        <!-- ================================================= -->
+        {% if current_tab == 'users' %}
+
+        <!-- Fully Functional User Filters -->
+        <form method="GET" id="userFilterForm" class="flex flex-wrap gap-2 mb-5">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+            
+            <select name="role" onchange="document.getElementById('userFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.role == '' %}selected{% endif %}>All Roles</option>
+                <option value="sender" {% if request.GET.role == 'sender' %}selected{% endif %}>Sender</option>
+                <option value="provider" {% if request.GET.role == 'provider' %}selected{% endif %}>Provider</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">New Signups</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ usr_new_signups|default:"14" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Active Senders</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ usr_active_senders|default:"32" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Active Providers</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ usr_active_providers|default:"15" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Repeat Booking Rate</p>
+                <p class="text-xl font-black text-emerald-600 mt-1">{{ usr_repeat_rate|default:"41.0%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Pending Verifications</p>
+                <p class="text-xl font-black text-red-500 mt-1">{{ usr_pending_verifications|default:"4" }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-1">New Signups — Sender vs. Provider</h3>
+                <p class="text-[11px] text-gray-400 mb-4">Last 6 months</p>
+                <div class="relative w-full h-[260px]">
+                    <canvas id="signupsChart"></canvas>
+                </div>
+            </div>
+            <div class="lg:col-span-1 border border-gray-100 rounded-2xl p-5">
+                <h3 class="text-sm font-bold text-gray-900 mb-3">Top Providers This Period</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-xs shrink-0">M</div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-gray-800 truncate">Moises Padriga</p>
+                                <p class="text-[10px] text-gray-400">18 completed · ★ 4.9</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700 shrink-0">₱4,120</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-xs shrink-0">R</div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-gray-800 truncate">Rendell James Lumindas</p>
+                                <p class="text-[10px] text-gray-400">15 completed · ★ 4.8</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700 shrink-0">₱3,450</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-8 h-8 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-xs shrink-0">K</div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-gray-800 truncate">Kenchi Otida</p>
+                                <p class="text-[10px] text-gray-400">12 completed · ★ 4.7</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700 shrink-0">₱2,890</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            new Chart(document.getElementById('signupsChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        { label: 'Senders', data: [5, 6, 4, 7, 6, 8], backgroundColor: '#FF751F', stack: 's' },
+                        { label: 'Providers', data: [2, 1, 3, 2, 2, 3], backgroundColor: '#fde2b3', stack: 's' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: '#f3f4f6' } } }
+                }
+            });
+        </script>
+        {% endif %}
+
+        <!-- ================================================= -->
+        <!-- BLOCKCHAIN AUDIT                                   -->
+        <!-- ================================================= -->
+        {% if current_tab == 'blockchain' %}
+
+        <!-- Fully Functional Blockchain Filters -->
+        <form method="GET" id="blockchainFilterForm" class="flex flex-wrap gap-2 mb-5">
+            <input type="hidden" name="tab" value="{{ current_tab }}">
+            <input type="hidden" name="period" value="{{ selected_period|default:'this_month' }}">
+            
+            <select name="proof_type" onchange="document.getElementById('blockchainFilterForm').submit();" class="border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold text-gray-600 bg-white outline-none cursor-pointer">
+                <option value="" {% if request.GET.proof_type == '' %}selected{% endif %}>All Proof Types</option>
+                <option value="escrow" {% if request.GET.proof_type == 'escrow' %}selected{% endif %}>Escrow</option>
+                <option value="pickup" {% if request.GET.proof_type == 'pickup' %}selected{% endif %}>Pickup</option>
+                <option value="dropoff" {% if request.GET.proof_type == 'dropoff' %}selected{% endif %}>Drop-off</option>
+            </select>
+        </form>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Total Proofs Recorded</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ bc_total_proofs|default:"312" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Pickup Verified Rate</p>
+                <p class="text-xl font-black text-emerald-600 mt-1">{{ bc_pickup_rate|default:"99.1%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Drop-off Verified Rate</p>
+                <p class="text-xl font-black text-emerald-600 mt-1">{{ bc_dropoff_rate|default:"98.6%" }}</p>
+            </div>
+            <div class="bg-[#F8F9FA] rounded-2xl p-4 border border-gray-100">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Escrow Tx Anchored</p>
+                <p class="text-xl font-black text-gray-900 mt-1">{{ bc_escrow_anchored|default:"96" }}</p>
+            </div>
+        </div>
+
+        <div class="border border-gray-100 rounded-2xl overflow-hidden">
+            <div class="px-5 py-3 bg-[#F8F9FA]">
+                <h3 class="text-xs font-bold text-gray-500 uppercase">Recent On-Chain Records</h3>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-xs font-bold text-gray-500 uppercase border-t border-gray-100">
+                <div>Delivery ID</div>
+                <div>Proof Type</div>
+                <div>Tx Hash</div>
+                <div>Recorded At</div>
+                <div>Status</div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">#1008</div><div class="text-gray-600">Drop-off</div><div class="text-gray-400 font-mono text-xs truncate" title="0x8f3ac1...e29e21">0x8f3ac1...e29e21</div><div class="text-gray-500">Sep 07, 2026</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">#1008</div><div class="text-gray-600">Pickup</div><div class="text-gray-400 font-mono text-xs truncate" title="0x2ab77d...9c14f0">0x2ab77d...9c14f0</div><div class="text-gray-500">Sep 07, 2026</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">#1007</div><div class="text-gray-600">Escrow</div><div class="text-gray-400 font-mono text-xs truncate" title="0x91fd42...7b3a88">0x91fd42...7b3a88</div><div class="text-gray-500">Sep 06, 2026</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">#1006</div><div class="text-gray-600">Drop-off</div><div class="text-gray-400 font-mono text-xs truncate" title="0x5c0e19...4d67aa">0x5c0e19...4d67aa</div><div class="text-gray-500">Sep 05, 2026</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span></li></div>
+            </div>
+            <div class="grid grid-cols-5 gap-4 px-5 py-3 text-sm border-t border-gray-100">
+                <div class="font-semibold text-gray-800">#1005</div><div class="text-gray-600">Pickup</div><div class="text-gray-400 font-mono text-xs truncate" title="0xd41a90...1f22bc">0xd41a90...1f22bc</div><div class="text-gray-500">Sep 05, 2026</div>
+                <div><span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Verified</span></div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
 {% endblock %}

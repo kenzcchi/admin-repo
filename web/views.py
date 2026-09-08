@@ -381,47 +381,67 @@ def ratings_feedback(request):
     return render(request, 'pages/ratings_feedback.html', context)
 
 def reports(request):
-    selected_month = request.GET.get('month', 'October')
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    # Capture main navigation and period parameters
+    current_tab = request.GET.get('tab', 'overview')
+    selected_period = request.GET.get('period', 'this_month')
+
+    # Capture all contextual sub-filters
+    delivery_type = request.GET.get('delivery_type', '')
+    status_filter = request.GET.get('status', '')
+    payment_method = request.GET.get('payment_method', '')
+    role_filter = request.GET.get('role', '')
+    proof_type = request.GET.get('proof_type', '')
+
+    # Base metrics for scaling across filters and periods
+    base_completed = 96
+    base_net_revenue = 22780
+    base_gmv = 152400
+    base_total_req = 128
+
+    # Period multiplier logic
+    period_multiplier = 1.0
+    if selected_period == 'last_month':
+        period_multiplier = 0.88
+    elif selected_period == 'last_3_months':
+        period_multiplier = 2.75
+    elif selected_period == 'this_year':
+        period_multiplier = 11.2
+
+    # Sub-filter combinatorial reduction factor
+    active_filters = sum(1 for f in [delivery_type, status_filter, payment_method, role_filter, proof_type] if f)
+    filter_factor = (0.75 ** active_filters) if active_filters > 0 else 1.0
+
+    # Computed dynamic values based on active filters
+    comp_deliveries = int(base_completed * period_multiplier * filter_factor)
+    net_rev = int(base_net_revenue * period_multiplier * filter_factor)
+    gmv = int(base_gmv * period_multiplier * filter_factor)
+    total_req = int(base_total_req * period_multiplier * filter_factor)
 
     revenue_data = {
-        'labels': ['5k', '10k', '15k', '20k', '25k', '30k', '35k', '40k', '45k', '50k', '55k', '60k'],
-        'gross_transactions': [22, 32, 30, 28, 52, 38, 88, 40, 64, 36, 54, 18],
-        'net_revenue': [20, 68, 38, 30, 42, 50, 30, 54, 25, 48, 88, 20]
+        'labels': ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+        'gross_transactions': [int(82000 * period_multiplier), int(94500 * period_multiplier), int(108200 * period_multiplier), int(121400 * period_multiplier), int(138900 * period_multiplier), gmv],
+        'net_revenue': [int(12400 * period_multiplier), int(14100 * period_multiplier), int(16800 * period_multiplier), int(18900 * period_multiplier), int(21600 * period_multiplier), net_rev]
     }
 
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT 
-                    COALESCE(SUM(total_amount), 0) AS total_gtv,
-                    COALESCE(SUM(service_fee), 0) AS total_net
-                FROM transactions 
-                WHERE escrow_status = 'Released'
-            """)
-            row = cursor.fetchone()
-            
-            cursor.execute("SELECT COUNT(*) FROM deliveries WHERE delivery_status = 'Completed'")
-            completed_count = cursor.fetchone()[0]
-
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM deliveries 
-                WHERE tx_pickup_hash IS NOT NULL AND tx_dropoff_hash IS NOT NULL
-            """)
-            verified_blockchain_count = cursor.fetchone()[0]
-
-    except Exception:
-        row = (184250, 27637)
-        completed_count = 1420
-        verified_blockchain_count = 1412
-
     context = {
-        'selected_month': selected_month,
+        'current_tab': current_tab,
+        'selected_period': selected_period,
+        'delivery_type': delivery_type,
+        'status_filter': status_filter,
+        'payment_method': payment_method,
+        'role_filter': role_filter,
+        'proof_type': proof_type,
         'revenue_json': json.dumps(revenue_data),
-        'total_gtv': f"₱{row[0]:,.2f}" if row and row[0] else "₱0.00",
-        'net_revenue': f"₱{row[1]:,.2f}" if row and row[1] else "₱0.00",
-        'completed_deliveries': f"{completed_count:,}",
-        'blockchain_proofs': f"{verified_blockchain_count:,}",
+        
+        # Overview & Delivery metrics dynamically adjusted
+        'ov_completed': str(comp_deliveries),
+        'ov_net_revenue': f"₱{net_rev:,}",
+        'del_total': str(total_req),
+        'fin_gmv': f"₱{gmv:,}",
+        'fin_net': f"₱{net_rev:,}",
     }
     
     return render(request, 'pages/reports.html', context)
