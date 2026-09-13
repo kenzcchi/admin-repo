@@ -1,0 +1,482 @@
+{% extends 'admin_fullscreen_base.html' %}
+{% load static %}
+
+{% block title %}Support Inbox - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="h-full flex bg-white overflow-hidden">
+
+    <!-- ============== COLUMN 1: Messenger-Style Inbox (Left) ============== -->
+    <!-- Slightly narrowed to give more room to the chat and profile columns -->
+    <div class="w-full md:w-[300px] lg:w-[320px] shrink-0 border-r border-gray-200 flex flex-col bg-[#F9FAFB] z-10">
+        
+        <div class="px-5 pt-6 pb-2">
+            <div class="flex justify-between items-center mb-5">
+                <h1 class="text-[22px] font-bold text-gray-900">Inbox</h1>
+            </div>
+
+            <div class="relative w-full mb-5">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input id="supportSearchInput" type="text" oninput="filterTickets(this.value)"
+                       placeholder="Search users or tickets..."
+                       class="block w-full pl-11 pr-4 py-2 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-brand transition-all outline-none shadow-sm">
+            </div>
+
+            <div class="flex text-sm font-semibold border-b border-gray-200">
+                <button onclick="switchTab('open')" id="tabOpenBtn" class="pb-3 px-2 mr-4 tab-btn flex items-center gap-1.5">
+                    Active <span id="countOpen" class="text-[10px] font-bold bg-gray-200 text-gray-700 rounded-full px-1.5 py-0.5">0</span>
+                </button>
+                <button onclick="switchTab('pending')" id="tabPendingBtn" class="pb-3 px-2 mr-4 tab-btn flex items-center gap-1.5">
+                    Pending <span id="countPending" class="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5">0</span>
+                </button>
+                <button onclick="switchTab('resolved')" id="tabResolvedBtn" class="pb-3 px-2 tab-btn">
+                    Resolved
+                </button>
+            </div>
+        </div>
+
+        <div id="ticketList" class="flex-1 overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
+            <!-- Ticket Items injected via JS -->
+        </div>
+    </div>
+
+    <!-- ============== COLUMN 2: Chat Thread (Center) ============== -->
+    <!-- Flex-1 allows it to take all remaining space between the fixed columns -->
+    <div class="flex-1 flex flex-col bg-white min-w-0 relative">
+
+        <div id="emptyState" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white hidden">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">No Conversation Selected</h3>
+            <p class="text-sm text-gray-500 mt-1">Select a ticket from the inbox to view details and reply.</p>
+        </div>
+
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center shrink-0 bg-white shadow-sm z-10">
+            <div class="min-w-0 pr-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <h2 id="chatTopic" class="text-lg font-bold text-gray-900 truncate">Select a ticket</h2>
+                    <span id="chatUrgentBadge" class="hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-600 shrink-0 border border-red-200">Urgent</span>
+                </div>
+                <p class="text-xs text-gray-500 font-medium">Ticket #<span id="chatTicketId">---</span> <span class="mx-1">•</span> Related Delivery: <a id="chatTransactionId" href="#" class="text-brand hover:underline">---</a></p>
+            </div>
+
+            <div class="relative shrink-0" id="statusDropdownWrap">
+                <button onclick="toggleStatusMenu()" id="statusPill" class="text-sm font-bold px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 shadow-sm cursor-pointer">
+                    <span id="statusPillDot" class="w-2 h-2 rounded-full"></span>
+                    <span id="statusPillLabel">---</span>
+                    <svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="statusMenu" class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-20">
+                    <button onclick="setTicketStatus('open')" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> Active
+                    </button>
+                    <button onclick="setTicketStatus('pending')" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Pending
+                    </button>
+                    <button onclick="setTicketStatus('resolved')" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Resolved
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="supportMessagesContainer" class="flex-1 overflow-y-auto p-6 space-y-6 bg-white min-h-0 custom-scrollbar">
+            <!-- Messages injected via JS -->
+        </div>
+
+        <!-- Message Composer: Aligned perfectly via items-center and fixed heights -->
+        <div class="p-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3 shrink-0">
+            <textarea id="supportReplyInput" rows="1" placeholder="Type your reply to the user..."
+                      onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendSupportMessage(); }"
+                      class="flex-1 px-4 py-3.5 bg-white border border-gray-300 rounded-xl text-sm placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-brand transition-all outline-none resize-none shadow-sm h-[50px]"></textarea>
+            
+            <button onclick="sendSupportMessage()"
+                    class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 rounded-xl transition-all shadow-md hover:shadow-lg h-[50px] shrink-0">
+                Send
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============== COLUMN 3: Full User Record (Right) ============== -->
+    <!-- Widened to fit all comprehensive data without scrolling horizontally -->
+    <div id="userProfilePanel" class="hidden xl:flex w-[360px] 2xl:w-[400px] shrink-0 border-l border-gray-200 bg-[#F9FAFB] flex-col overflow-y-auto custom-scrollbar opacity-0 transition-opacity duration-300">
+        
+        <div class="bg-white p-6 flex flex-col items-center text-center border-b border-gray-200 shrink-0">
+            <div id="profileAvatar" class="w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold"></div>
+            <h3 id="profileName" class="text-xl font-bold text-gray-900 truncate w-full mb-1">---</h3>
+            <div class="flex items-center gap-2 mb-3">
+                <span id="profileRole" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase">---</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-bold border border-green-200">Active Account</span>
+            </div>
+            
+            <!-- Trust & Safety Badges -->
+            <div class="flex gap-2 text-xs text-gray-600 bg-gray-50 py-1.5 px-3 rounded-lg border border-gray-100 w-full justify-center">
+                <span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ID Verified</span>
+                <span class="text-gray-300">|</span>
+                <span>Joined <strong id="profileJoined">---</strong></span>
+            </div>
+        </div>
+
+        <div class="p-5 space-y-6 flex-1">
+            
+            <!-- Financials / Balances -->
+            <div>
+                <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Account Balances</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Wallet</p>
+                        <p id="profileWallet" class="text-lg font-black text-gray-900 mt-0.5">₱0.00</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">In Escrow</p>
+                        <p id="profileEscrow" class="text-lg font-black text-brand mt-0.5">₱0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Provider Specific: Vehicle Info (Hidden if Sender) -->
+            <div id="vehicleSection" class="hidden">
+                <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vehicle Details</h4>
+                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-sm">
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-500">Type</span>
+                        <span id="profileVehicleType" class="font-semibold text-gray-900">---</span>
+                    </div>
+                    <div class="flex justify-between mb-2">
+                        <span class="text-gray-500">Plate No.</span>
+                        <span id="profileVehiclePlate" class="font-semibold text-gray-900">---</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">License Status</span>
+                        <span class="font-semibold text-green-600">Valid</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Details -->
+            <div>
+                <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Contact & Location</h4>
+                <div class="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="flex items-center gap-3 text-gray-700">
+                        <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        <span id="profileEmail" class="text-sm font-medium truncate">---</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-gray-700">
+                        <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        <span id="profilePhone" class="text-sm font-medium">---</span>
+                    </div>
+                    <div class="flex items-start gap-3 text-gray-700 pt-1">
+                        <svg class="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span id="profileAddrPrimary" class="text-sm font-medium">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Metrics -->
+            <div>
+                <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Platform Metrics</h4>
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span class="text-gray-500">Total Deliveries</span>
+                        <span id="profileTotalRequests" class="font-bold text-gray-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span class="text-gray-500">Cancellations</span>
+                        <span id="profileCancellations" class="font-bold text-gray-900">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-4 text-sm">
+                        <span class="text-gray-500">Average Rating</span>
+                        <span class="font-bold text-amber-500 flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                            <span id="profileRating">---</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-btn { color: #9CA3AF; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
+    .tab-btn:hover { color: #374151; }
+    .tab-btn.tab-active { color: #FF751F; border-bottom: 2px solid #FF751F; }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #D1D5DB; }
+</style>
+
+<script>
+    // ==========================================================
+    // FRONT-END DEMO DATA (Expanded user info)
+    // ==========================================================
+    let TICKETS = [
+        {
+            id: 1, name: 'Jonel Jumawan', initials: 'JJ', role: 'Sender',
+            topic: 'Delivery delayed', status: 'open', is_urgent: true,
+            transaction_id: '1001', 
+            contact_email: 'jonel.jumawan@example.com', phone: '+63 912 345 6789',
+            joined: 'Feb 2026', addrPrimary: 'Talamban, Cebu City',
+            finances: { wallet: '₱1,250.00', escrow: '₱350.00' },
+            vehicle: null,
+            stats: { total: 12, cancelled: 1, rating: '4.8' },
+            updated_label: '5 min ago',
+        },
+        {
+            id: 2, name: 'Jun Joseph Pestaño', initials: 'JP', role: 'Provider',
+            topic: 'Escrow not released', status: 'pending', is_urgent: false,
+            transaction_id: '1002', 
+            contact_email: 'junjlabdan@gmail.com', phone: '+63 998 765 4321',
+            joined: 'Jan 2026', addrPrimary: 'Colon Street, Cebu City',
+            finances: { wallet: '₱4,500.00', escrow: '₱1,200.00' },
+            vehicle: { type: 'Motorcycle - Honda Click 125i', plate: 'CBA-1234' },
+            stats: { total: 45, cancelled: 0, rating: '4.9' },
+            updated_label: '32 min ago',
+        },
+        {
+            id: 3, name: 'Bryan Nikole Dionson', initials: 'BD', role: 'Sender',
+            topic: 'Change dropoff address', status: 'resolved', is_urgent: false,
+            transaction_id: '1004', 
+            contact_email: 'driandionson@gmail.com', phone: '+63 917 111 2222',
+            joined: 'Mar 2026', addrPrimary: 'Lahug, Cebu City',
+            finances: { wallet: '₱0.00', escrow: '₱0.00' },
+            vehicle: null,
+            stats: { total: 3, cancelled: 0, rating: '5.0' },
+            updated_label: 'Yesterday',
+        },
+    ];
+
+    let THREADS = {
+        1: [
+            { body: "Hi, my package pickup is delayed and I haven't heard from the provider.", is_admin_reply: false, created_at: '10:05 AM', sender_name: 'Jonel Jumawan' },
+            { body: "Sorry about that! Let me check your delivery status and get back to you shortly.", is_admin_reply: true, created_at: '10:06 AM', sender_name: 'Admin' },
+        ],
+        2: [
+            { body: "My escrow payment for a completed delivery hasn't been released yet.", is_admin_reply: false, created_at: '9:42 AM', sender_name: 'Jun Joseph Pestaño' },
+        ],
+        3: [
+            { body: "Can I update my final delivery destination before pickup?", is_admin_reply: false, created_at: 'Yesterday', sender_name: 'Bryan Nikole Dionson' },
+            { body: "Yes, you can update it anytime before the provider marks pickup as complete.", is_admin_reply: true, created_at: 'Yesterday', sender_name: 'Admin' },
+        ],
+    };
+
+    const ROLE_BADGE = { 
+        Sender: 'bg-blue-50 text-blue-700 border border-blue-200', 
+        Provider: 'bg-green-50 text-green-700 border border-green-200' 
+    };
+    
+    const STATUS_META = {
+        open:     { label: 'Active',   dot: 'bg-blue-500',  pill: 'text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100' },
+        pending:  { label: 'Pending',  dot: 'bg-amber-500', pill: 'text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100' },
+        resolved: { label: 'Resolved', dot: 'bg-green-500', pill: 'text-green-700 border-green-200 bg-green-50 hover:bg-green-100' },
+    };
+
+    let currentTab = 'open';
+    let activeTicketId = null;
+
+    function getTicket(id) {
+        return TICKETS.find(t => t.id === id);
+    }
+
+    function renderCounts() {
+        document.getElementById('countOpen').innerText = TICKETS.filter(t => t.status === 'open').length;
+        document.getElementById('countPending').innerText = TICKETS.filter(t => t.status === 'pending').length;
+    }
+
+    function renderTicketList(filterQuery = '') {
+        const list = document.getElementById('ticketList');
+        const q = filterQuery.trim().toLowerCase();
+
+        const visible = TICKETS.filter(t => {
+            const matchesTab = t.status === currentTab;
+            const blob = `${t.name} ${t.role} ${t.topic}`.toLowerCase();
+            return matchesTab && blob.includes(q);
+        });
+
+        list.innerHTML = visible.map(t => `
+            <div class="ticket-item block p-4 cursor-pointer transition-all border-l-4 ${t.id === activeTicketId ? 'bg-orange-50/50 border-brand' : 'border-transparent hover:bg-gray-50'}"
+                 data-ticket-id="${t.id}">
+                <div class="flex justify-between items-start mb-1.5">
+                    <span class="text-[13px] font-bold text-gray-900 truncate pr-2">${t.name}</span>
+                    <span class="text-[10px] font-medium text-gray-400 shrink-0 mt-0.5">${t.updated_label}</span>
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase ${ROLE_BADGE[t.role] || 'bg-gray-100 text-gray-600'}">${t.role}</span>
+                    ${t.is_urgent ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 text-red-600 border border-red-200">Urgent</span>' : ''}
+                </div>
+                <p class="text-[13px] font-semibold text-gray-800 truncate mb-1">${t.topic}</p>
+                <p class="text-xs text-gray-500 truncate">${(THREADS[t.id] && THREADS[t.id].length) ? THREADS[t.id][THREADS[t.id].length - 1].body : 'No messages yet.'}</p>
+            </div>
+        `).join('') || `<div class="p-8 text-center text-sm text-gray-400">No tickets found.</div>`;
+
+        renderCounts();
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        ['open', 'pending', 'resolved'].forEach(s => {
+            const btn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}Btn`);
+            btn.classList.toggle('tab-active', s === tab);
+        });
+
+        renderTicketList(document.getElementById('supportSearchInput').value);
+
+        const firstVisible = TICKETS.find(t => t.status === tab);
+        if (firstVisible) selectTicket(firstVisible.id);
+        else clearThreadView();
+    }
+
+    function filterTickets(query) {
+        renderTicketList(query);
+    }
+
+    function selectTicket(id) {
+        activeTicketId = id;
+        const t = getTicket(id);
+        if (!t) return;
+
+        document.getElementById('emptyState').classList.add('hidden');
+        const profilePanel = document.getElementById('userProfilePanel');
+        profilePanel.classList.remove('hidden');
+        setTimeout(() => profilePanel.classList.remove('opacity-0'), 10);
+
+        renderTicketList(document.getElementById('supportSearchInput').value);
+
+        // Chat Header
+        document.getElementById('chatTopic').innerText = t.topic;
+        document.getElementById('chatUrgentBadge').classList.toggle('hidden', !t.is_urgent);
+        document.getElementById('chatTicketId').innerText = t.id;
+        document.getElementById('chatTransactionId').innerText = t.transaction_id ? `#${t.transaction_id}` : 'None';
+        applyStatusPill(t.status);
+
+        // Comprehensive User Profile Column
+        document.getElementById('profileAvatar').innerText = t.initials;
+        if(t.role === 'Provider') {
+            document.getElementById('profileAvatar').className = "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-green-500 border-green-100 text-white";
+            document.getElementById('profileRole').className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-green-50 text-green-700 border border-green-200";
+            
+            // Show vehicle section
+            document.getElementById('vehicleSection').classList.remove('hidden');
+            document.getElementById('profileVehicleType').innerText = t.vehicle.type;
+            document.getElementById('profileVehiclePlate').innerText = t.vehicle.plate;
+        } else {
+            document.getElementById('profileAvatar').className = "w-20 h-20 rounded-full border-4 flex items-center justify-center shadow-md mb-3 text-2xl font-bold bg-blue-500 border-blue-100 text-white";
+            document.getElementById('profileRole').className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-200";
+            
+            // Hide vehicle section for Senders
+            document.getElementById('vehicleSection').classList.add('hidden');
+        }
+
+        document.getElementById('profileName').innerText = t.name;
+        document.getElementById('profileRole').innerText = t.role;
+        document.getElementById('profileJoined').innerText = t.joined;
+        document.getElementById('profileEmail').innerText = t.contact_email;
+        document.getElementById('profilePhone').innerText = t.phone;
+        document.getElementById('profileAddrPrimary').innerText = t.addrPrimary;
+        
+        document.getElementById('profileWallet').innerText = t.finances.wallet;
+        document.getElementById('profileEscrow').innerText = t.finances.escrow;
+
+        document.getElementById('profileTotalRequests').innerText = t.stats.total;
+        document.getElementById('profileCancellations').innerText = t.stats.cancelled;
+        document.getElementById('profileRating').innerText = t.stats.rating;
+
+        // Render Messages
+        renderThread(id);
+    }
+
+    function clearThreadView() {
+        activeTicketId = null;
+        document.getElementById('emptyState').classList.remove('hidden');
+        document.getElementById('userProfilePanel').classList.add('opacity-0');
+        setTimeout(() => document.getElementById('userProfilePanel').classList.add('hidden'), 300);
+    }
+
+    function applyStatusPill(status) {
+        const meta = STATUS_META[status];
+        const pill = document.getElementById('statusPill');
+        pill.className = `text-sm font-bold px-4 py-2 rounded-lg border transition-colors flex items-center gap-2 shadow-sm cursor-pointer ${meta.pill}`;
+        document.getElementById('statusPillDot').className = `w-2 h-2 rounded-full ${meta.dot}`;
+        document.getElementById('statusPillLabel').innerText = meta.label;
+    }
+
+    function toggleStatusMenu() {
+        document.getElementById('statusMenu').classList.toggle('hidden');
+    }
+    
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('statusDropdownWrap');
+        if (wrap && !wrap.contains(e.target)) document.getElementById('statusMenu').classList.add('hidden');
+    });
+
+    function setTicketStatus(status) {
+        if (!activeTicketId) return;
+        document.getElementById('statusMenu').classList.add('hidden');
+
+        const t = getTicket(activeTicketId);
+        if (t) t.status = status;
+        applyStatusPill(status);
+        switchTab(currentTab); 
+    }
+
+    function renderThread(ticketId) {
+        const container = document.getElementById('supportMessagesContainer');
+        const messages = THREADS[ticketId] || [];
+
+        container.innerHTML = messages.map(m => `
+            <div class="flex flex-col ${m.is_admin_reply ? 'items-end' : 'items-start'}">
+                <span class="text-[11px] font-semibold text-gray-400 mb-1.5 px-1">${m.is_admin_reply ? (m.sender_name || 'Admin') : getTicket(ticketId).name} <span class="font-normal mx-1">•</span> ${m.created_at}</span>
+                <div class="max-w-[85%] px-5 py-3 text-sm leading-relaxed shadow-sm ${m.is_admin_reply ? 'bg-brand text-white rounded-2xl rounded-br-sm' : 'bg-[#F3F4F6] border border-gray-200 text-gray-800 rounded-2xl rounded-bl-sm'}">
+                    ${m.body}
+                </div>
+            </div>
+        `).join('') || `<div class="flex items-center justify-center h-full text-sm text-gray-400">No messages in this conversation yet.</div>`;
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function sendSupportMessage() {
+        const input = document.getElementById('supportReplyInput');
+        const text = input.value.trim();
+        if (!text || !activeTicketId) return;
+
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const newMessage = { body: text, is_admin_reply: true, created_at: timestamp, sender_name: 'Admin' };
+
+        THREADS[activeTicketId] = THREADS[activeTicketId] || [];
+        THREADS[activeTicketId].push(newMessage);
+        renderThread(activeTicketId);
+
+        const t = getTicket(activeTicketId);
+        if (t) {
+            t.updated_label = 'Just now';
+            if (t.status === 'resolved') {
+                t.status = 'pending';
+                applyStatusPill('pending');
+            }
+        }
+
+        input.value = '';
+        renderTicketList(document.getElementById('supportSearchInput').value);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('ticketList').addEventListener('click', (e) => {
+            const item = e.target.closest('.ticket-item');
+            if (item) selectTicket(Number(item.dataset.ticketId));
+        });
+
+        switchTab('open');
+    });
+</script>
+{% endblock %}

@@ -1,11 +1,43 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from .models import ProviderVerification
 from django.contrib import messages
 from django.db import connection
+from django.template.exceptions import TemplateDoesNotExist
 import json
 
+# ==========================================
+# MOCK DATA FOR MESSAGES INBOX
+# ==========================================
+MOCK_CONVERSATIONS = [
+    {
+        'room_id': 'room_1001',
+        'delivery_id': '1001',
+        'sender': 'Jonel Jumawan',
+        'provider': 'Jun Joseph Pestaño',
+        'last_message': 'Please ensure contactless handover if possible.',
+        'updated_at': '10:14 AM',
+        'messages': [
+            {'sender_id': 301, 'sender_name': 'Jonel Jumawan', 'sender_role': 'sender', 'message': 'Hello, is my delivery confirmed?', 'sent_at': '10:10 AM'},
+            {'sender_id': 402, 'sender_name': 'Jun Joseph Pestaño', 'sender_role': 'provider', 'message': 'Yes, accepting it now.', 'sent_at': '10:12 AM'},
+            {'sender_id': 0, 'sender_name': 'Admin', 'sender_role': 'admin', 'message': 'Please ensure contactless handover if possible.', 'sent_at': '10:14 AM'}
+        ]
+    },
+    {
+        'room_id': 'room_1002',
+        'delivery_id': '1002',
+        'sender': 'Kornel Jumao-as',
+        'provider': 'Jun Joseph Pestaño',
+        'last_message': 'Escrow frozen temporarily while investigating.',
+        'updated_at': 'Yesterday',
+        'messages': [
+            {'sender_id': 402, 'sender_name': 'Jun Joseph Pestaño', 'sender_role': 'provider', 'message': 'Route is blocked due to roadwork.', 'sent_at': 'Yesterday 2:30 PM'},
+            {'sender_id': 0, 'sender_name': 'Admin', 'sender_role': 'admin', 'message': 'Escrow frozen temporarily while investigating.', 'sent_at': 'Yesterday 2:40 PM'}
+        ]
+    }
+]
+
 def admin_login(request):
-    # If already logged in, go straight to the dashboard
     if request.session.get('is_mock_logged_in'):
         return redirect('dashboard')
         
@@ -35,7 +67,6 @@ def users_page(request):
 
     current_tab = request.GET.get('tab', 'all')
 
-    # Updated mock data: All are now Providers, and Pending providers default to 'Inactive'
     mock_users = [
         {
             'id': 'USI1', 'name': 'Rendell James Luminous', 'email': 'rjlumindas@gmail.com',
@@ -63,13 +94,11 @@ def users_page(request):
         }
     ]
 
-    # Filter data based on the selected tab
     if current_tab == 'verified':
         filtered_users = [u for u in mock_users if u['status1'] == 'Verified']
     elif current_tab == 'pending':
         filtered_users = [u for u in mock_users if u['status1'] == 'Pending']
     else:
-        # Show all providers for the "All Providers" tab
         filtered_users = [u for u in mock_users if u['role'] == 'Provider']
 
     return render(request, 'pages/users.html', {
@@ -77,13 +106,10 @@ def users_page(request):
         'current_tab': current_tab
     })
 
-#Provider-Verification    
 def provider_verification(request):
-# Enforce mock session check matching users_page pattern
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
 
-    # Mock provider verification data
     mock_verifications = [
         {
             'id': 1,
@@ -170,12 +196,10 @@ def deliveries(request):
         'deliveries': mock_deliveries
     })
 
-# Generic placeholder view for other sections so routing works perfectly
 def generic_admin_page(request, title):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
     return render(request, 'pages/generic_placeholder.html', {'page_title': title})
-
 
 def escrow_payments(request):
     if not request.session.get('is_mock_logged_in'):
@@ -268,30 +292,18 @@ def escrow_payments(request):
 def ratings_feedback(request):
     current_tab = request.GET.get('tab', 'overview')
     
-    # ------------------------------------------------------------------
-    # 1. HANDLE POST ACTIONS (Remove Review / Resolve Dispute)
-    # ------------------------------------------------------------------
     if request.method == 'POST':
         action = request.POST.get('action')
         review_id = request.POST.get('review_id')
 
         if action == 'remove' and review_id:
-            # Example raw SQL or ORM deletion:
-            # with connection.cursor() as cursor:
-            #     cursor.execute("DELETE FROM ratings_reviews WHERE review_id = %s", [review_id])
             messages.success(request, f"Review #REV-{review_id} has been successfully removed.")
             
         elif action == 'resolve' and review_id:
-            # Example update status if you have a status/flagged column:
-            # with connection.cursor() as cursor:
-            #     cursor.execute("UPDATE ratings_reviews SET status = 'Active' WHERE review_id = %s", [review_id])
             messages.success(request, f"Dispute for Review #REV-{review_id} has been marked as resolved.")
 
         return redirect(f"{request.path}?tab={current_tab}")
 
-    # ------------------------------------------------------------------
-    # 2. FETCH DATA FROM DATABASE OR FALLBACK MOCK DATA
-    # ------------------------------------------------------------------
     reviews_list = []
     disputes_list = []
 
@@ -322,7 +334,7 @@ def ratings_feedback(request):
                     'reviewer_id': row[5],
                     'reviewee_id': row[6],
                     'created_at': row[7].strftime('%Y-%m-%d') if row[7] else '—',
-                    'status': 'Flagged' if row[1] <= 2 else 'Active'  # Example condition for demo
+                    'status': 'Flagged' if row[1] <= 2 else 'Active'
                 }
                 
                 reviews_list.append(item)
@@ -330,7 +342,6 @@ def ratings_feedback(request):
                     disputes_list.append(item)
 
     except Exception:
-        # Fallback sample data matching your schema fields if DB table is empty or unpopulated
         reviews_list = [
             {
                 'review_id': 101,
@@ -369,9 +380,6 @@ def ratings_feedback(request):
         
         disputes_list = [r for r in reviews_list if r['status'] == 'Flagged']
 
-    # ------------------------------------------------------------------
-    # 3. RENDER TEMPLATE
-    # ------------------------------------------------------------------
     context = {
         'current_tab': current_tab,
         'reviews_list': reviews_list,
@@ -384,24 +392,20 @@ def reports(request):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
 
-    # Capture main navigation and period parameters
     current_tab = request.GET.get('tab', 'overview')
     selected_period = request.GET.get('period', 'this_month')
 
-    # Capture all contextual sub-filters
     delivery_type = request.GET.get('delivery_type', '')
     status_filter = request.GET.get('status', '')
     payment_method = request.GET.get('payment_method', '')
     role_filter = request.GET.get('role', '')
     proof_type = request.GET.get('proof_type', '')
 
-    # Base metrics for scaling across filters and periods
     base_completed = 96
     base_net_revenue = 22780
     base_gmv = 152400
     base_total_req = 128
 
-    # Period multiplier logic
     period_multiplier = 1.0
     if selected_period == 'last_month':
         period_multiplier = 0.88
@@ -410,11 +414,9 @@ def reports(request):
     elif selected_period == 'this_year':
         period_multiplier = 11.2
 
-    # Sub-filter combinatorial reduction factor
     active_filters = sum(1 for f in [delivery_type, status_filter, payment_method, role_filter, proof_type] if f)
     filter_factor = (0.75 ** active_filters) if active_filters > 0 else 1.0
 
-    # Computed dynamic values based on active filters
     comp_deliveries = int(base_completed * period_multiplier * filter_factor)
     net_rev = int(base_net_revenue * period_multiplier * filter_factor)
     gmv = int(base_gmv * period_multiplier * filter_factor)
@@ -435,8 +437,6 @@ def reports(request):
         'role_filter': role_filter,
         'proof_type': proof_type,
         'revenue_json': json.dumps(revenue_data),
-        
-        # Overview & Delivery metrics dynamically adjusted
         'ov_completed': str(comp_deliveries),
         'ov_net_revenue': f"₱{net_rev:,}",
         'del_total': str(total_req),
@@ -450,7 +450,6 @@ def settings_page(request):
     if not request.session.get('is_mock_logged_in'):
         return redirect('login')
 
-    # Default initial values
     settings_data = {
         'door_to_door': '20.00',
         'platform_commission': '8.5',
@@ -459,13 +458,11 @@ def settings_page(request):
     }
 
     if request.method == 'POST':
-        # Grab updated values from form submit
         settings_data['door_to_door'] = request.POST.get('door_to_door', settings_data['door_to_door'])
         settings_data['platform_commission'] = request.POST.get('platform_commission', settings_data['platform_commission'])
         settings_data['base_fare'] = request.POST.get('base_fare', settings_data['base_fare'])
         settings_data['per_km_rate'] = request.POST.get('per_km_rate', settings_data['per_km_rate'])
 
-        # Show success toast or message
         messages.success(request, 'Settings updated successfully!')
 
     return render(request, 'pages/settings.html', {
@@ -478,17 +475,89 @@ def custom_logout(request):
         del request.session['is_mock_logged_in']
     return redirect('login')
 
+# ==========================================
+# RESTORED MESSAGES VIEWS
+# ==========================================
 def messages_view(request):
-    conversations = []
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+    
     current_tab = request.GET.get('tab', 'all')
+    selected_room_id = request.GET.get('room_id') or (MOCK_CONVERSATIONS[0]['room_id'] if MOCK_CONVERSATIONS else '')
+    
+    conversations = MOCK_CONVERSATIONS
+    if current_tab == 'active':
+        conversations = [c for c in MOCK_CONVERSATIONS if '1002' in c['delivery_id']] 
+        
+    active_conversation = next((c for c in MOCK_CONVERSATIONS if c['room_id'] == selected_room_id), MOCK_CONVERSATIONS[0] if MOCK_CONVERSATIONS else None)
+
     context = {
         'conversations': conversations,
         'current_tab': current_tab,
+        'active_room_id': selected_room_id,
+        'active_conversation': active_conversation,
     }
-    return render(request, 'messages.html', context)
+    
+    # Try finding the template in /pages/ first, fallback to root if not found
+    try:
+        return render(request, 'pages/messages.html', context)
+    except TemplateDoesNotExist:
+        return render(request, 'messages.html', context)
 
 def message_thread_api(request, room_id):
-    return JsonResponse({'messages': [], 'delivery_id': 0})
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    conv = next((c for c in MOCK_CONVERSATIONS if c['room_id'] == str(room_id) or c['room_id'] == f"room_{room_id}"), None)
+    if not conv:
+        return JsonResponse({'messages': [], 'delivery_id': 0})
+        
+    return JsonResponse({
+        'room_id': conv['room_id'],
+        'delivery_id': conv['delivery_id'],
+        'sender': conv['sender'],
+        'provider': conv['provider'],
+        'messages': conv['messages']
+    })
 
 def send_message_api(request, room_id):
-    return JsonResponse({'status': 'success'})
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            message_text = data.get('message', '').strip()
+            if not message_text:
+                return JsonResponse({'error': 'Empty message'}, status=400)
+                
+            conv = next((c for c in MOCK_CONVERSATIONS if c['room_id'] == str(room_id) or c['room_id'] == f"room_{room_id}"), None)
+            if conv:
+                new_msg = {
+                    'sender_id': 0,
+                    'sender_name': 'Admin',
+                    'sender_role': 'admin',
+                    'message': message_text,
+                    'sent_at': 'Just now'
+                }
+                conv['messages'].append(new_msg)
+                conv['last_message'] = message_text
+                conv['updated_at'] = 'Just now'
+                return JsonResponse({'status': 'success', 'message': new_msg})
+                
+            return JsonResponse({'error': 'Room not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+def admin_support_view(request):
+    if not request.session.get('is_mock_logged_in'):
+        return redirect('login')
+
+    # Try finding the template in /pages/ first, fallback to root if not found
+    try:
+        return render(request, 'pages/admin_support_inbox.html')
+    except TemplateDoesNotExist:
+        return render(request, 'admin_support_inbox.html')
