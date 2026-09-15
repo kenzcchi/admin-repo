@@ -1,0 +1,57 @@
+{% extends 'admin_base.html' %}
+{% load static %}
+
+{% block title %}Settings - Pack-N-Ship{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px] mx-auto">
+    
+    <div class="mb-6 px-2">
+        <h1 class="text-[28px] font-bold text-gray-800 leading-tight">Finance & Revenue Engine</h1>
+        <p class="text-sm text-gray-500 font-medium mt-0.5">
+            Commission, base pricing & Door-to-Door convenience fee
+        </p>
+    </div>
+
+    <form method="POST" action="{% url 'settings' %}">
+        {% csrf_token %}
+        <div class="bg-white rounded-3xl p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] mb-8 space-y-6">
+            
+            <div class="bg-[#F8F9FA] rounded-2xl p-6 border border-gray-100">
+                <label class="block text-sm font-bold text-gray-800 mb-0.5">Door-to-Door</label>
+                <p class="text-xs text-gray-500 font-medium mb-3">Extra fee (₱) — added to total</p>
+                <input type="text" name="door_to_door" value="{{ settings.door_to_door }}" 
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+                <p class="text-[11px] text-gray-400 font-medium mt-2">Convenience surcharge for indoor pickup/dropoff</p>
+            </div>
+
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">Platform Commission Rate (%)</label>
+                <input type="text" name="platform_commission" value="{{ settings.platform_commission }}" 
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            </div>
+
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">Base Fare (₱)</label>
+                <input type="text" name="base_fare" value="{{ settings.base_fare }}" 
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            </div>
+
+            <div class="space-y-1.5 px-2">
+                <label class="block text-sm font-bold text-gray-800">Per Kilometer Rate (₱/km)</label>
+                <input type="text" name="per_km_rate" value="{{ settings.per_km_rate }}" 
+                    class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 font-medium focus:outline-none focus:border-white focus:ring-2 focus:ring-[#FF751F] transition-all">
+            </div>
+        </div>
+
+        <div class="flex justify-end px-2">
+            <button type="submit" class="inline-flex items-center gap-2.5 bg-[#FF751F] hover:bg-[#e6691c] text-white font-bold text-sm px-8 py-3 rounded-xl transition shadow-md shadow-[#ff751f]/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                </svg>
+                Save Settings
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
