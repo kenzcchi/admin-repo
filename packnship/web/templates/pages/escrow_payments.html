@@ -66,14 +66,12 @@
                 <div class="col-span-1 font-bold text-gray-900">{{ item.amount }}</div>
                 
                 <div class="col-span-1">
-                    {% if item.status|lower == 'on hold' %}
+                    {% if item.status == 'On Hold' %}
                         <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">On Hold</span>
-                    {% elif item.status|lower == 'frozen' %}
+                    {% elif item.status == 'Frozen' %}
                         <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>
-                    {% elif item.status|lower == 'released' %}
+                    {% elif item.status == 'Released' %}
                         <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Released</span>
-                    {% else %}
-                        <span class="px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold border border-gray-200">{{ item.status }}</span>
                     {% endif %}
                 </div>
 
@@ -88,7 +86,7 @@
             </div>
             {% empty %}
             <div id="noRecordsDiv" class="text-center py-12">
-                <p class="text-gray-500 text-sm">No active escrow records found in Supabase database.</p>
+                <p class="text-gray-500 text-sm">No active escrow records found.</p>
             </div>
             {% endfor %}
         </div>
@@ -228,7 +226,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">S</div>
                         <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase">Sender</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Sender ID</p>
                             <p id="modalSenderId" class="text-sm font-bold text-gray-800">USR-000</p>
                         </div>
                     </div>
@@ -236,7 +234,7 @@
                     <div class="flex items-center gap-3 border-t border-gray-100 pt-3">
                         <div class="w-10 h-10 rounded-full bg-orange-100 text-[#FF751F] flex items-center justify-center font-bold text-sm shrink-0">P</div>
                         <div>
-                            <p class="text-xs font-bold text-gray-400 uppercase">Provider</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Provider ID</p>
                             <p id="modalProviderId" class="text-sm font-bold text-gray-800">PRV-000</p>
                         </div>
                     </div>
@@ -301,6 +299,7 @@
     let currentSelectedId = null;
     let pendingActionData = null;
 
+    // Client-side search filtering logic matching other dashboard modules
     function filterEscrowRecords(query) {
         const q = query.trim().toLowerCase();
         const rows = document.querySelectorAll('.escrow-row');
@@ -344,10 +343,9 @@
 
         const badge = document.getElementById('modalStatusBadge');
         badge.innerText = d.status;
-        const statusLower = (d.status || '').toLowerCase();
-        if (statusLower === 'released') {
+        if (d.status === 'Released') {
             badge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
-        } else if (statusLower === 'frozen') {
+        } else if (d.status === 'Frozen') {
             badge.className = "px-3 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold text-xs border border-red-200";
         } else {
             badge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
@@ -496,6 +494,7 @@
     function submitConfirmedAction() {
         if (!pendingActionData) return;
         
+        // Execute AJAX/Form submission here
         console.log(`Executing ${pendingActionData.action} on ${pendingActionData.id}`);
         
         closeConfirmModal();
