@@ -457,42 +457,56 @@ def escrow_payments(request):
 
     current_tab = request.GET.get('tab', 'active')
 
-    mock_escrow_list = [
-        {
-            'id': 'EID501',
-            'delivery_id': '1001',
-            'sender_id': 'USR-201',
-            'provider_id': 'PRV-501',
-            'amount': '₱250.00',
-            'status': 'On Hold',
-            'bc_escrow_tx_hash': '0x71c...a89f',
-            'emergency_frozen': False,
-            'created_at': '2026-03-28 10:15 AM'
-        },
-        {
-            'id': 'EID502',
-            'delivery_id': '1002',
-            'sender_id': 'USR-204',
-            'provider_id': 'PRV-503',
-            'amount': '₱180.00',
-            'status': 'Frozen',
-            'bc_escrow_tx_hash': '0x32b...f11e',
-            'emergency_frozen': True,
-            'created_at': '2026-03-27 02:40 PM'
-        },
-        {
-            'id': 'EID503',
-            'delivery_id': '1003',
-            'sender_id': 'USR-210',
-            'provider_id': 'PRV-508',
-            'amount': '₱220.00',
-            'status': 'Released',
-            'bc_escrow_tx_hash': '0x88f...c401',
-            'emergency_frozen': False,
-            'created_at': '2026-03-26 09:10 AM'
-        },
-    ]
+    escrow_list = []
 
+    # Fetch real data from Supabase DB via connection cursor
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    ep.escrow_id,
+                    ep.delivery_id,
+                    ep.amount,
+                    ep.escrow_status,
+                    ep.emergency_frozen,
+                    ep.created_at,
+                    ep.bc_escrow_tx_hash,
+                    ep.sender_id,
+                    ep.provider_id,
+                    CONCAT_WS(' ', s.first_name, s.last_name) AS sender_name,
+                    CONCAT_WS(' ', p.first_name, p.last_name) AS provider_name
+                FROM escrow_payments ep
+                LEFT JOIN users s ON s.user_id = ep.sender_id
+                LEFT JOIN users p ON p.user_id = ep.provider_id
+                ORDER BY ep.created_at DESC
+            """)
+            rows = cursor.fetchall()
+
+            for row in rows:
+                (escrow_id, delivery_id, amount, status, emergency_frozen, 
+                 created_at, tx_hash, sender_id, provider_id, sender_name, provider_name) = row
+
+                # Format name fallbacks if name is empty
+                s_display = sender_name.strip() if sender_name and sender_name.strip() else f"USR-{sender_id}"
+                p_display = provider_name.strip() if provider_name and provider_name.strip() else f"PRV-{provider_id}"
+
+                escrow_list.append({
+                    'id': f"EID{escrow_id}",
+                    'raw_id': escrow_id,
+                    'delivery_id': delivery_id,
+                    'sender_id': f"{s_display} (ID: {sender_id})",
+                    'provider_id': f"{p_display} (ID: {provider_id})",
+                    'amount': f"₱{float(amount or 0):,.2f}",
+                    'status': status,
+                    'bc_escrow_tx_hash': tx_hash or '',
+                    'emergency_frozen': bool(emergency_frozen),
+                    'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—'
+                })
+    except Exception as e:
+        print(f"[escrow_payments] Database query error: {e}")
+        escrow_list = []
+
+    # Unmodified Transactions Mock Data
     mock_transactions = [
         {
             'id': 'TID101',
@@ -534,7 +548,7 @@ def escrow_payments(request):
 
     return render(request, 'pages/escrow_payments.html', {
         'current_tab': current_tab,
-        'escrow_list': mock_escrow_list,
+        'escrow_list': escrow_list,
         'transactions': mock_transactions,
     })
 
