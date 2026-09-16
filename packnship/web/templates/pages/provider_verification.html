@@ -38,28 +38,25 @@
         </div>
 
         <!-- Table Header -->
-        <div class="grid grid-cols-7 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
+        <div class="grid grid-cols-6 gap-4 bg-[#F8F9FA] rounded-xl px-6 py-4 mb-2 text-sm font-semibold text-gray-700">
             <div class="col-span-1">Provider ID</div>
             <div class="col-span-2">Name</div>
-            <div class="col-span-1">Vehicle Info</div>
+            <div class="col-span-1">Email</div>
             <div class="col-span-1 text-center">Status</div>
-            <div class="col-span-2 text-right pr-4">Actions</div>
+            <div class="col-span-1 text-right pr-4">Actions</div>
         </div>
 
         <!-- Table Body -->
         <div id="providerTableBody" class="flex flex-col space-y-1">
             {% for item in verifications %}
-            <div data-search="us{{ item.user_id }} {{ item.name }} {{ item.plate_no }} {{ item.vehicle_type }}"
+            <div data-search="us{{ item.user_id }} {{ item.name }} {{ item.email }} {{ item.phone }}"
                  data-user-id="{{ item.user_id }}"
                  onclick="openVerificationModal({{ item.user_id }})"
-                 class="provider-row grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
+                 class="provider-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-0 group">
 
                 <div class="col-span-1 text-sm font-medium text-gray-800">US{{ item.user_id }}</div>
                 <div class="col-span-2 text-sm font-medium text-gray-800">{{ item.name }}</div>
-                <div class="col-span-1 text-sm text-gray-600">
-                    <div class="font-medium text-gray-800">{{ item.plate_no }}</div>
-                    <div class="text-xs text-gray-500">{{ item.vehicle_type }}</div>
-                </div>
+                <div class="col-span-1 text-sm text-gray-600 truncate">{{ item.email }}</div>
                 <div class="col-span-1 flex items-center justify-center">
                     {% if item.status == 'Pending' %}
                         <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold">Pending</span>
@@ -69,7 +66,7 @@
                         <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">{{ item.status }}</span>
                     {% endif %}
                 </div>
-                <div class="col-span-2 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
+                <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
                     {% if item.status == 'Rejected' %}
                         <form method="post" action="{% url 'approve_provider' item.user_id %}" class="inline">
                             {% csrf_token %}
@@ -137,10 +134,24 @@
                         <span id="modalStatusBadge" class="px-4 py-1 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-sm border border-orange-100">Pending</span>
                     </div>
 
+                    <!-- Driver's License — FRONT & BACK -->
                     <div>
-                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Driver's License / Valid ID</h3>
-                        <div class="bg-white p-2 rounded-lg border border-gray-300 shadow-sm">
-                            <img id="modalIdPhoto" src="{% static 'images/user_avatar_placeholder.png' %}" alt="Driver's License" class="w-full h-48 object-cover rounded shadow-sm bg-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 uppercase mb-3">Driver's License</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white p-2 rounded-lg border border-gray-300 shadow-sm">
+                                <p class="text-[11px] font-bold text-gray-400 uppercase mb-2 text-center">Front</p>
+                                <img id="modalLicensePhotoFront"
+                                     src="{% static 'images/user_avatar_placeholder.png' %}"
+                                     alt="Driver's License Front"
+                                     class="w-full h-40 object-cover rounded shadow-sm bg-gray-100">
+                            </div>
+                            <div class="bg-white p-2 rounded-lg border border-gray-300 shadow-sm">
+                                <p class="text-[11px] font-bold text-gray-400 uppercase mb-2 text-center">Back</p>
+                                <img id="modalLicensePhotoBack"
+                                     src="{% static 'images/user_avatar_placeholder.png' %}"
+                                     alt="Driver's License Back"
+                                     class="w-full h-40 object-cover rounded shadow-sm bg-gray-100">
+                            </div>
                         </div>
                     </div>
 
@@ -157,26 +168,24 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-white p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Valid ID Type</p>
-                            <p id="modalValidIdType" class="text-[15px] text-gray-800 font-medium">—</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Email</p>
+                            <p id="modalEmail" class="text-[15px] text-gray-800 font-medium truncate">—</p>
                         </div>
                         <div class="bg-white p-3 rounded-lg border border-gray-200">
-                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Valid ID Number</p>
-                            <p id="modalValidIdNumber" class="text-[15px] text-gray-800 font-medium">—</p>
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Phone</p>
+                            <p id="modalPhone" class="text-[15px] text-gray-800 font-medium">—</p>
                         </div>
                     </div>
 
-                    <div class="bg-white border border-gray-300 rounded-lg p-4 flex justify-between items-center shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase">Vehicle OR/CR</p>
-                                <p id="modalVehicleInfo" class="text-sm font-medium text-gray-800">—</p>
-                            </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Submitted At</p>
+                            <p id="modalSubmittedAt" class="text-[15px] text-gray-800 font-medium">—</p>
                         </div>
-                        <a id="modalVehicleDocLink" href="#" target="_blank" class="text-[#FF751F] hover:underline text-sm font-bold flex items-center gap-1 hidden">
-                            View PDF 
-                        </a>
+                        <div class="bg-white p-3 rounded-lg border border-gray-200">
+                            <p class="text-xs font-bold text-gray-400 uppercase mb-1">Role</p>
+                            <p class="text-[15px] text-gray-800 font-medium">Provider</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -268,6 +277,8 @@
     let activeActionId = null;
     let activeActionName = null;
 
+    const PLACEHOLDER_IMG = "{% static 'images/user_avatar_placeholder.png' %}";
+
     function filterProviderRecords(query) {
         const q = query.trim().toLowerCase();
         const rows = document.querySelectorAll('.provider-row');
@@ -295,28 +306,23 @@
 
         document.getElementById('modalProviderId').innerText = 'US' + item.user_id;
         document.getElementById('modalName').innerText = item.name;
-        document.getElementById('modalLicenseNo').innerText = item.license_no;
-        document.getElementById('modalExpiryDate').innerText = item.license_expiry;
-        document.getElementById('modalVehicleInfo').innerText = `${item.plate_no} (${item.vehicle_type})`;
-        document.getElementById('modalValidIdType').innerText = item.valid_id_type;
-        document.getElementById('modalValidIdNumber').innerText = item.valid_id_number;
+        document.getElementById('modalLicenseNo').innerText = item.license_no || '—';
+        document.getElementById('modalExpiryDate').innerText = item.license_expiry || '—';
+        document.getElementById('modalEmail').innerText = item.email || '—';
+        document.getElementById('modalPhone').innerText = item.phone || '—';
+        document.getElementById('modalSubmittedAt').innerText = item.submitted_at || '—';
 
-        // ID photo
-        const idPhotoEl = document.getElementById('modalIdPhoto');
-        if (item.id_photo) {
-            idPhotoEl.src = item.id_photo;
-        } else {
-            idPhotoEl.src = "{% static 'images/user_avatar_placeholder.png' %}";
-        }
+        // ✅ Driver's License FRONT — from provider_verifications.selfie_photo
+        const frontEl = document.getElementById('modalLicensePhotoFront');
+        const frontSrc = item.selfie_photo || item.id_photo || PLACEHOLDER_IMG;
+        frontEl.onerror = () => { frontEl.src = PLACEHOLDER_IMG; };
+        frontEl.src = frontSrc;
 
-        // Vehicle doc link
-        const docLink = document.getElementById('modalVehicleDocLink');
-        if (item.vehicle_doc) {
-            docLink.href = item.vehicle_doc;
-            docLink.classList.remove('hidden');
-        } else {
-            docLink.classList.add('hidden');
-        }
+        // ✅ Driver's License BACK — from provider_verifications.selfie_photo_back
+        const backEl = document.getElementById('modalLicensePhotoBack');
+        const backSrc = item.selfie_photo_back || PLACEHOLDER_IMG;
+        backEl.onerror = () => { backEl.src = PLACEHOLDER_IMG; };
+        backEl.src = backSrc;
 
         const firstLetter = item.name ? item.name.trim().charAt(0).toUpperCase() : 'U';
         document.getElementById('modalAvatarInitial').innerText = firstLetter;

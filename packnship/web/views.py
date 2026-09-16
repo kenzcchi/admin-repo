@@ -371,6 +371,7 @@ def provider_verification(request):
                     pv.drivers_license_number,
                     pv.license_expiry_date,
                     pv.selfie_photo,
+                    pv.selfie_photo_back,
                     COALESCE(pv.verification_status, 'Pending') AS verification_status,
                     pv.submitted_at,
                     pv.bc_verif_tx_hash,
@@ -400,7 +401,7 @@ def provider_verification(request):
             rows = cursor.fetchall()
 
             for row in rows:
-                (verification_id, license_no, expiry_date, selfie_photo,
+                (verification_id, license_no, expiry_date, selfie_photo, selfie_photo_back,
                  verif_status, submitted_at, tx_hash,
                  uid, first_name, middle_name, last_name, email, phone,
                  id_photo, valid_id_type, valid_id_number,
@@ -417,6 +418,7 @@ def provider_verification(request):
                     'license_no': license_no or '—',
                     'license_expiry': expiry_date.strftime('%Y-%m-%d') if expiry_date else '—',
                     'selfie_photo': selfie_photo or '',
+                    'selfie_photo_back': selfie_photo_back or '',
                     'id_photo': id_photo or '',
                     'valid_id_type': valid_id_type or '—',
                     'valid_id_number': valid_id_number or '—',
