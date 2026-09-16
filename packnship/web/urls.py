@@ -7,8 +7,8 @@ urlpatterns = [
     path('users/', views.users_page, name='users'),
 
     path('provider-verification/', views.provider_verification, name='provider_verification'),
-    path('provider-verification/<int:pk>/approve/', views.approve_provider, name='approve_provider'),
-    path('provider-verification/<int:pk>/reject/', views.reject_provider, name='reject_provider'),
+    path('provider-verification/<int:user_id>/approve/', views.approve_provider, name='approve_provider'),
+    path('provider-verification/<int:user_id>/reject/', views.reject_provider, name='reject_provider'),
 
     path('deliveries/', views.deliveries, name='deliveries'),
 
