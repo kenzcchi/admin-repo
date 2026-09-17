@@ -26,7 +26,7 @@
                 </a>
             </div>
 
-            <!-- Search Bar placed directly inside the main container -->
+            <!-- Search Bar -->
             <div class="relative w-full md:w-72">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <img src="{% static 'images/search_icon.png' %}" alt="Search" class="w-4 h-4 object-contain opacity-50">
@@ -48,14 +48,15 @@
         <!-- Active Escrow Table Body -->
         <div id="escrowTableBody" class="flex flex-col space-y-1">
             {% for item in escrow_list %}
-            <div onclick="openEscrowModalFromElement(this)"
-                 data-search="{{ item.id }} #{{ item.delivery_id }} {{ item.amount }} {{ item.status }} {{ item.sender_id }} {{ item.provider_id }}"
+            <div id="escrow-row-{{ item.id }}"
+                 onclick="openEscrowModalFromElement(this)"
+                 data-search="{{ item.id }} #{{ item.delivery_id }} {{ item.amount }} {{ item.escrow_status }} {{ item.sender_id }} {{ item.provider_id }}"
                  data-id="{{ item.id }}"
                  data-delivery-id="{{ item.delivery_id }}"
                  data-sender-id="{{ item.sender_id }}"
                  data-provider-id="{{ item.provider_id }}"
                  data-amount="{{ item.amount }}"
-                 data-status="{{ item.status }}"
+                 data-escrow_status="{{ item.escrow_status }}"
                  data-tx-hash="{{ item.bc_escrow_tx_hash }}"
                  data-frozen="{{ item.emergency_frozen|yesno:'true,false' }}"
                  data-created-at="{{ item.created_at }}"
@@ -65,21 +66,31 @@
                 <div class="col-span-1 font-medium text-gray-800">#{{ item.delivery_id }}</div>
                 <div class="col-span-1 font-bold text-gray-900">{{ item.amount }}</div>
                 
-                <div class="col-span-1">
-                    {% if item.status == 'On Hold' %}
+                <!-- Dynamic Status Cell -->
+                <div class="col-span-1 status-cell">
+                    {% if item.escrow_status|lower == 'on hold' %}
                         <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">On Hold</span>
-                    {% elif item.status == 'Frozen' %}
+                    {% elif item.escrow_status|lower == 'frozen' %}
                         <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>
-                    {% elif item.status == 'Released' %}
+                    {% elif item.escrow_status|lower == 'released' %}
                         <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Released</span>
+                    {% else %}
+                        <span class="px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold border border-gray-200">
+                            {{ item.escrow_status|default:"On Hold" }}
+                        </span>
                     {% endif %}
                 </div>
 
+                <!-- Action Controls Column -->
                 <div class="col-span-1 flex items-center justify-end gap-2 pr-2" onclick="event.stopPropagation();">
                     <button type="button" onclick="requestAction('refund', '{{ item.id }}')" class="bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs px-4 py-2 rounded-lg transition border border-red-100">
                         Refund
                     </button>
-                    <button type="button" onclick="requestAction('freeze', '{{ item.id }}', {{ item.emergency_frozen|yesno:'true,false' }})" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition">
+                    <!-- Toggle Freeze / Unfreeze Button -->
+                    <button type="button" 
+                            id="freeze-btn-{{ item.id }}"
+                            onclick="requestAction('freeze', '{{ item.id }}', {{ item.emergency_frozen|yesno:'true,false' }})" 
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs px-4 py-2 rounded-lg transition">
                         {% if item.emergency_frozen %}Unfreeze{% else %}Freeze{% endif %}
                     </button>
                 </div>
@@ -107,7 +118,7 @@
         <div id="escrowTableBody" class="flex flex-col space-y-1">
             {% for item in transactions %}
             <div onclick="openTransactionModalFromElement(this)"
-                 data-search="{{ item.id }} #{{ item.delivery_id }} {{ item.total_amount }} {{ item.method }} {{ item.status }} {{ item.escrow_id }}"
+                 data-search="{{ item.id }} #{{ item.delivery_id }} {{ item.total_amount }} {{ item.method }} {{ item.escrow_status }} {{ item.escrow_id }}"
                  data-id="{{ item.id }}"
                  data-escrow-id="{{ item.escrow_id }}"
                  data-delivery-id="{{ item.delivery_id }}"
@@ -116,7 +127,7 @@
                  data-penalty-fee="{{ item.penalty_fee }}"
                  data-total-amount="{{ item.total_amount }}"
                  data-method="{{ item.method }}"
-                 data-status="{{ item.status }}"
+                 data-escrow_status="{{ item.escrow_status }}"
                  data-processed-at="{{ item.processed_at }}"
                  class="escrow-row grid grid-cols-6 gap-4 items-center px-6 py-4 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors border-b border-gray-100 last:border-0 text-sm group">
                 
@@ -126,12 +137,16 @@
                 <div class="col-span-1 text-gray-700 font-medium">{{ item.method }}</div>
                 
                 <div class="col-span-1">
-                    {% if item.status == 'Completed' %}
-                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Completed</span>
-                    {% elif item.status == 'Frozen' %}
+                    {% if item.escrow_status|lower == 'on hold' %}
+                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">On Hold</span>
+                    {% elif item.escrow_status|lower == 'frozen' %}
                         <span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>
+                    {% elif item.escrow_status|lower == 'released' %}
+                        <span class="px-4 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold border border-green-200">Released</span>
                     {% else %}
-                        <span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">{{ item.status }}</span>
+                        <span class="px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold border border-gray-200">
+                            {{ item.escrow_status|default:"On Hold" }}
+                        </span>
                     {% endif %}
                 </div>
 
@@ -145,7 +160,7 @@
         </div>
         {% endif %}
 
-        <!-- Dynamic No Search Results State (Hidden by default) -->
+        <!-- Dynamic No Search Results State -->
         <div id="searchNoResults" class="text-center py-12 hidden">
             <p class="text-gray-500 text-sm">No records match your search criteria.</p>
         </div>
@@ -272,18 +287,15 @@
     
     <div id="confirmModalContent" class="relative bg-white rounded-3xl p-6 shadow-2xl w-full max-w-md mx-4 transform scale-95 opacity-0 transition-all duration-200 text-center flex flex-col items-center">
         
-        <!-- Status Icon Container -->
         <div id="confirmIconContainer" class="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-colors">
             <svg id="confirmIcon" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path id="confirmIconPath" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
             </svg>
         </div>
 
-        <!-- Title & Subtitle -->
         <h3 id="confirmTitle" class="text-xl font-extrabold text-gray-900 mb-2">Confirm Action</h3>
         <p id="confirmMessage" class="text-sm text-gray-500 font-medium mb-6 px-2">Are you sure you want to proceed with this request?</p>
 
-        <!-- Action Buttons -->
         <div class="flex items-center justify-center gap-3 w-full">
             <button type="button" onclick="closeConfirmModal()" class="flex-1 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors">
                 Cancel
@@ -299,7 +311,7 @@
     let currentSelectedId = null;
     let pendingActionData = null;
 
-    // Client-side search filtering logic matching other dashboard modules
+    // Search filter function
     function filterEscrowRecords(query) {
         const q = query.trim().toLowerCase();
         const rows = document.querySelectorAll('.escrow-row');
@@ -342,10 +354,13 @@
         document.getElementById('modalFrozenBanner').classList.toggle('hidden', !isFrozen);
 
         const badge = document.getElementById('modalStatusBadge');
-        badge.innerText = d.status;
-        if (d.status === 'Released') {
+        const statusText = d.escrow_status || 'On Hold';
+        badge.innerText = statusText;
+
+        const normalizedStatus = statusText.toLowerCase();
+        if (normalizedStatus === 'released') {
             badge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
-        } else if (d.status === 'Frozen') {
+        } else if (normalizedStatus === 'frozen') {
             badge.className = "px-3 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold text-xs border border-red-200";
         } else {
             badge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
@@ -354,7 +369,7 @@
         document.getElementById('ledgerBreakdownContainer').innerHTML = `
             <div class="flex justify-between py-1 border-b border-gray-100">
                 <span class="text-gray-500">Escrow Hold Status</span>
-                <span class="font-bold text-gray-800">${d.status}</span>
+                <span class="font-bold text-gray-800">${statusText}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-gray-100">
                 <span class="text-gray-500">Emergency Frozen State</span>
@@ -386,8 +401,8 @@
         document.getElementById('blockchainProofCard').classList.add('hidden');
 
         const badge = document.getElementById('modalStatusBadge');
-        badge.innerText = d.status;
-        if (d.status === 'Completed') {
+        badge.innerText = d.escrow_status;
+        if (d.escrow_status.toLowerCase() === 'completed') {
             badge.className = "px-3 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold text-xs border border-green-200";
         } else {
             badge.className = "px-3 py-0.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] font-semibold text-xs border border-orange-100";
@@ -434,9 +449,9 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 
-    /* CUSTOM CONFIRMATION MODAL LOGIC */
+    /* CONFIRMATION MODAL LOGIC */
     function requestAction(action, id, isFrozen = false) {
-        pendingActionData = { action, id };
+        pendingActionData = { action, id, isFrozen };
         
         const titleEl = document.getElementById('confirmTitle');
         const msgEl = document.getElementById('confirmMessage');
@@ -479,7 +494,9 @@
 
     function triggerEscrowFromModal(action) {
         if (currentSelectedId) {
-            requestAction(action, currentSelectedId);
+            const row = document.getElementById(`escrow-row-${currentSelectedId}`);
+            const isFrozen = row ? row.getAttribute('data-frozen') === 'true' : false;
+            requestAction(action, currentSelectedId, isFrozen);
         }
     }
 
@@ -491,14 +508,82 @@
         setTimeout(() => { modal.classList.add('hidden'); }, 200);
     }
 
+    /* SUBMIT ACTION WITH BACKEND BACKED TOGGLE */
     function submitConfirmedAction() {
         if (!pendingActionData) return;
-        
-        // Execute AJAX/Form submission here
-        console.log(`Executing ${pendingActionData.action} on ${pendingActionData.id}`);
-        
-        closeConfirmModal();
-        closeModal();
+
+        const { action, id } = pendingActionData;
+
+        if (action === 'freeze') {
+            fetch('/api/escrow/toggle-freeze/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ escrow_id: id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateRowUI(id, data.is_frozen, data.escrow_status);
+                    closeConfirmModal();
+                    closeModal();
+                } else {
+                    alert('Error updating status: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                console.error('Freeze Request failed:', err);
+                alert('Connection error occurred while updating status.');
+            });
+        } else {
+            closeConfirmModal();
+            closeModal();
+        }
+    }
+
+    // Dynamic UI update function
+    function updateRowUI(id, isFrozen, status) {
+        const row = document.getElementById(`escrow-row-${id}`);
+        if (!row) return;
+
+        // Update data attributes
+        row.setAttribute('data-frozen', isFrozen ? 'true' : 'false');
+        row.setAttribute('data-escrow_status', status);
+
+        // Update Status Badge Cell
+        const statusCell = row.querySelector('.status-cell');
+        if (statusCell) {
+            if (isFrozen) {
+                statusCell.innerHTML = `<span class="px-4 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Frozen</span>`;
+            } else {
+                statusCell.innerHTML = `<span class="px-4 py-1.5 rounded-full bg-[#FFEEDD] text-[#D47A4A] text-xs font-semibold border border-orange-100">On Hold</span>`;
+            }
+        }
+
+        // Update Action Button
+        const freezeBtn = document.getElementById(`freeze-btn-${id}`);
+        if (freezeBtn) {
+            freezeBtn.innerText = isFrozen ? 'Unfreeze' : 'Freeze';
+            freezeBtn.setAttribute('onclick', `requestAction('freeze', '${id}', ${isFrozen})`);
+        }
+    }
+
+    // Helper to extract CSRF token cookie from browser
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 </script>
 {% endblock %}

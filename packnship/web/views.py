@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from .models import ProviderVerification
 from django.contrib import messages
@@ -483,12 +484,14 @@ def escrow_payments(request):
             rows = cursor.fetchall()
 
             for row in rows:
-                (escrow_id, delivery_id, amount, status, emergency_frozen, 
+                (escrow_id, delivery_id, amount, escrow_status, emergency_frozen, 
                  created_at, tx_hash, sender_id, provider_id, sender_name, provider_name) = row
 
                 # Format name fallbacks if name is empty
                 s_display = sender_name.strip() if sender_name and sender_name.strip() else f"USR-{sender_id}"
                 p_display = provider_name.strip() if provider_name and provider_name.strip() else f"PRV-{provider_id}"
+
+                formatted_status = (escrow_status or 'On Hold').title()
 
                 escrow_list.append({
                     'id': f"EID{escrow_id}",
@@ -497,7 +500,7 @@ def escrow_payments(request):
                     'sender_id': f"{s_display} (ID: {sender_id})",
                     'provider_id': f"{p_display} (ID: {provider_id})",
                     'amount': f"₱{float(amount or 0):,.2f}",
-                    'status': status,
+                    'escrow_status': formatted_status,
                     'bc_escrow_tx_hash': tx_hash or '',
                     'emergency_frozen': bool(emergency_frozen),
                     'created_at': created_at.strftime('%Y-%m-%d %I:%M %p') if created_at else '—'
@@ -517,7 +520,7 @@ def escrow_payments(request):
             'penalty_fee': '₱20.00',
             'total_amount': '₱250.00',
             'method': 'GCash',
-            'status': 'On Hold',
+            'escrow_status': 'On Hold',
             'processed_at': '2026-03-28 10:16 AM'
         },
         {
@@ -529,7 +532,7 @@ def escrow_payments(request):
             'penalty_fee': '₱0.00',
             'total_amount': '₱180.00',
             'method': 'GCash',
-            'status': 'Frozen',
+            'escrow_status': 'Frozen',
             'processed_at': '2026-03-27 02:42 PM'
         },
         {
@@ -541,7 +544,7 @@ def escrow_payments(request):
             'penalty_fee': '₱0.00',
             'total_amount': '₱220.00',
             'method': 'GCash',
-            'status': 'Completed',
+            'escrow_status': 'Completed',
             'processed_at': '2026-03-26 09:12 AM'
         },
     ]
@@ -551,6 +554,48 @@ def escrow_payments(request):
         'escrow_list': escrow_list,
         'transactions': mock_transactions,
     })
+
+@require_POST
+def toggle_escrow_freeze(request):
+    if not request.session.get('is_mock_logged_in'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        escrow_id = data.get('escrow_id')
+        
+        # Remove 'EID' prefix if present to match the database bigint primary key
+        if isinstance(escrow_id, str) and escrow_id.startswith('EID'):
+            escrow_id = escrow_id.replace('EID', '')
+
+        with connection.cursor() as cursor:
+            # First, check current state
+            cursor.execute("SELECT emergency_frozen FROM escrow_payments WHERE escrow_id = %s", [escrow_id])
+            row = cursor.fetchone()
+            
+            if not row:
+                return JsonResponse({'error': 'Escrow record not found'}, status=404)
+
+            is_currently_frozen = row[0]
+            new_frozen_state = not is_currently_frozen
+            new_status = 'Frozen' if new_frozen_state else 'On hold'
+
+            # Update database record
+            cursor.execute("""
+                UPDATE escrow_payments 
+                SET emergency_frozen = %s,
+                    escrow_status = %s
+                WHERE escrow_id = %s
+            """, [new_frozen_state, new_status, escrow_id])
+
+        return JsonResponse({
+            'status': 'success',
+            'is_frozen': new_frozen_state,
+            'escrow_status': new_status.title() # Returns 'Frozen' or 'On Hold'
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 def ratings_feedback(request):

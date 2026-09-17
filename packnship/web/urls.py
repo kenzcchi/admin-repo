@@ -13,6 +13,7 @@ urlpatterns = [
     path('deliveries/', views.deliveries, name='deliveries'),
 
     path('escrow-payments/', views.escrow_payments, name='escrow'),
+    path('api/escrow/toggle-freeze/', views.toggle_escrow_freeze, name='toggle_escrow_freeze'),
 
     path('ratings-feedback/', views.ratings_feedback, name='feedback'),
     path('reports/', views.reports, name='reports'),
